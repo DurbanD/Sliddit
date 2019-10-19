@@ -1,9 +1,9 @@
 class SlideShow {
-  constructor() {
-    this.counter = 0;
+  constructor(links={}, counter=0) {
+    this.counter = counter;
+    this.links = links;
     this.fetchJsonDefaultString = './.json?limit=100';
     this.page = 1;
-    this.links = {};
     this.lastLink = {}; 
     this.getMoreLinks(this.links).then(()=>this.updateUI(this.links, this.counter)).then(()=>this.createListeners()).then(()=>this.getManyMoreLinks(5));
   }
@@ -61,6 +61,7 @@ class SlideShow {
     document.body.addEventListener('keydown', (event) => {
       if (event.keyCode == 39) {
         event.preventDefault();
+        // window.setTimeout(this.nextLink(),1000);
         this.nextLink();
       }
       if (event.keyCode == 37) {
@@ -139,9 +140,9 @@ class SlideShowUI {
     let linkMainDiv = document.querySelector('#linkMainDiv');
     linkHead.innerText = link.data.title;
     linkHead.style.fontSize = '1rem';
-    linkHead.style.lineHeight = '0.5rem';
+    linkHead.style.lineHeight = '0.9rem';
     linkHead.style.textAlign = 'center';
-    linkHead.style.width = '90%';
+    linkHead.style.width = '95%';
     linkHead.style.margin = 'auto';
     linkHead.style.padding = '5px';
     linkHead.style.marginBottom = '1.5rem';
@@ -246,15 +247,14 @@ class SlideShowUI {
     }
   }
 
-  removeDefault() {
-    document.querySelector('#header').style.display = 'none';
-    document.querySelector('div.content').style.display = 'none';
-    document.querySelector('div.side').style.display = 'none';
-    document.querySelector('div.footer-parent').style.display = 'none';
-    document.querySelector('ul.res-floater-list').style.display = 'none';
-    document.body.style.height = '100%';
-    document.body.style.width = '100%';
-    document.body.style.overflow = 'hidden';
+  removeAllBodyNodes() {
+    for (let node of document.body.childNodes) {
+      try {
+        node.style.display = 'none';
+      } catch(error) {
+        continue;
+      }
+    }
   }
 
   destroyContainerContents() {
@@ -267,7 +267,8 @@ class SlideShowUI {
   generateUI() {
 
     if (!document.querySelector('#slideShowBG')) {
-      this.removeDefault();
+      // this.removeDefault();
+      this.removeAllBodyNodes();
       this.createBackground();
     }
     if (!document.querySelector('#linkMainDiv')) {
