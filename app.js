@@ -1,3 +1,14 @@
+// ==UserScript==
+// @name         Sliddit
+// @namespace    http://www.github.com/DurbanD/Sliddit/
+// @version      0.1
+// @description  Full-Screen Slideshow browsing for Reddit
+// @author       Durban
+// @match        https://www.reddit.com/*
+// @match        http://www.reddit.com/*
+// @grant        none
+// ==/UserScript==
+
 class SlideShow {
   constructor(links={}, counter=0) {
     this.links = links;
