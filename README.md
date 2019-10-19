@@ -10,7 +10,8 @@ gfycat.com
 Or any direct link to a common image or video file
 
 Installation:
-Copy & Paste the contents of app.js into the console. 
+Install with Tampermonkey at https://greasyfork.org/en/scripts/391366-sliddit
+Or Copy & Paste script into console or userscript extension of your choice.
 
 
 WIP
