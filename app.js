@@ -2,57 +2,20 @@ class SlideShow {
   constructor() {
     this.counter = 0;
     this.fetchJsonDefaultString = './.json?limit=100';
-    this.page = 1; 
-    this.getListings().then(()=>this.updateUI(this.links, this.counter)).then(()=>this.createListeners()).then(()=>this.getManyMoreLinks(5));
+    this.page = 1;
+    this.links = {};
+    this.lastLink = {}; 
+    this.getMoreLinks(this.links).then(()=>this.updateUI(this.links, this.counter)).then(()=>this.createListeners()).then(()=>this.getManyMoreLinks(5));
   }
 
-  async getListings(after=null, before=null) {
-
-    if (after === null && before === null) {
+  async getMoreLinks(linksPrimary) {
+    if (this.lastLink.data == undefined) {
       let links = fetch(this.fetchJsonDefaultString).then((response) => response.json()).then((result) => links = result.data.children);
       this.links = await links;
       this.lastLink = this.getLastAvailableLink();
       this.currentLink = this.getCurrentLink();
       return links;
     }
-    if (after === null && before != null) {
-      let links = fetch(this.fetchJsonDefaultString + `&before=${before}`).then((response) => response.json()).then((result) => links = result.data.children);
-      this.links = await links;
-      this.lastLink = this.getLastAvailableLink();
-      this.currentLink = this.getCurrentLink();
-      return links;
-    }
-    if (after != null && before === null) {
-      let links = fetch(this.fetchJsonDefaultString + `&after=${after}`).then((response) => response.json()).then((result) => links = result.data.children);
-      this.links = await links;
-      this.lastLink = this.getLastAvailableLink();
-      this.currentLink = this.getCurrentLink();
-      return links;
-    }
-    if (after != null && before != null) {
-      let links = fetch(this.fetchJsonDefaultString + `&after=${after}` + `&before=${before}`).then((response) => response.json()).then((result) => links = result.data.children);
-      this.links = await links;
-      this.lastLink = this.getLastAvailableLink();
-      this.currentLink = this.getCurrentLink();
-      return links;
-    }
-  }
-
-  getLastAvailableLink() {
-    return this.links[this.links.length-1];
-  }
-
-  getCurrentLink() {
-    return this.links[this.counter];
-  }
-
-  updateUI(links,counter) {
-    this.lastLink = this.getLastAvailableLink();
-    this.currentLink = this.getCurrentLink();
-    return new SlideShowUI(links, counter).generateUI();
-  }
-
-  async getMoreLinks(linksPrimary) {
     let extraLinks = fetch(this.fetchJsonDefaultString + `&after=${this.lastLink.data.name}`).then((response) => response.json()).then((result) => extraLinks = result.data.children);
     await extraLinks;
     this.lastLink = this.getLastAvailableLink();
@@ -65,6 +28,14 @@ class SlideShow {
       await this.getMoreLinks(this.links);
     }
     return this.links;
+  }
+
+  getLastAvailableLink() {
+    return this.links[this.links.length-1];
+  }
+
+  getCurrentLink() {
+    return this.links[this.counter];
   }
 
   nextLink() {
@@ -99,6 +70,12 @@ class SlideShow {
     });
   }
 
+  updateUI(links,counter) {
+    this.lastLink = this.getLastAvailableLink();
+    this.currentLink = this.getCurrentLink();
+    return new SlideShowUI(links, counter).generateUI();
+  }
+
 }
 
 
@@ -124,7 +101,7 @@ class SlideShowUI {
     fullScreenBackground.style.top = '0';
     fullScreenBackground.style.boxSizing = 'border-box';
     fullScreenBackground.style.zIndex = '99';
-    fullScreenBackground.style.background = '#222';
+    fullScreenBackground.style.background = '#111';
     fullScreenBackground.style.width = '100vw';
     fullScreenBackground.style.height = '100vh';
     fullScreenBackground.style.overflow = 'hidden';
@@ -153,6 +130,7 @@ class SlideShowUI {
     linkMainDiv.style.alignContent = 'center';
     linkMainDiv.style.alignItems = 'center';
     linkMainDiv.style.justifyContent = 'center';
+    linkMainDiv.style.background = 'rgba(225,225,255,0.05)';
     slideBG.appendChild(linkMainDiv);
   }
 
