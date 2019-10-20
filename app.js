@@ -14,7 +14,8 @@ class SlideShow {
     this.links = links;
     this.counter = counter;
     this.fetchJsonDefaultString = './.json?limit=100';
-    this.lastLink = {}; 
+    this.lastLink = {};
+
     this.getMoreLinks(this.links).then(()=>this.updateUI(this.links, this.counter)).then(()=>this.createKeyDownListeners()).then(()=>this.getManyMoreLinks(5));
   }
 
@@ -69,14 +70,21 @@ class SlideShow {
 
   createKeyDownListeners() {
     document.body.addEventListener('keydown', (event) => {
-      if (event.keyCode == 39) {
+      if (event.code == 'ArrowRight') {
         event.preventDefault();
-        // window.setTimeout(this.nextLink(),1000);
         this.nextLink();
       }
-      if (event.keyCode == 37) {
+      if (event.code == 'ArrowLeft') {
         event.preventDefault();
         this.previousLink();
+      }
+      if (event.code == 'Escape') {
+        event.preventDefault();
+        this.exitSlideShow();
+      }
+      if (event.code == 'Enter') {
+        event.preventDefault();
+        window.open('.'+ this.currentLink.data.permalink);
       }
     });
   }
@@ -190,25 +198,58 @@ class SlideShowUI {
   }
 
   createHead(link) {
-    let linkHead = document.createElement('h3');
     let linkMainDiv = document.querySelector('#linkMainDiv');
+
+    let headContainer = document.createElement('div');
+    headContainer.style.display = 'flex';
+    headContainer.flexFlow = 'column';
+    headContainer.id = 'headContainer';
+    headContainer.style.width = '100%';
+    headContainer.style.height = '80%';
+    headContainer.style.margin = '0 1rem 2rem 1rem';
+    headContainer.style.flexWrap = 'wrap';
+    headContainer.style.textAlign = 'center';
+    headContainer.style.justifyContent = 'center';
+
+    let linkHead = document.createElement('h3');
     linkHead.innerText = link.data.title;
     linkHead.style.fontSize = '1rem';
     linkHead.style.lineHeight = '1rem';
     linkHead.style.textAlign = 'center';
-    linkHead.style.width = '95%';
-    linkHead.style.margin = 'auto';
-    linkHead.style.padding = '5px';
-    linkHead.style.marginBottom = '1.5rem';
+    linkHead.style.padding = '5px 10px 5px 10px';
     linkHead.id = 'linkHead';
     linkHead.style.color = '#CCF';
+
     linkHead.onclick = function() {
       window.open('.'+link.data.permalink);
     }
     linkHead.onmouseover = function() {
       linkHead.style.cursor = 'pointer';
     }
-    linkMainDiv.appendChild(linkHead);
+    headContainer.appendChild(linkHead);
+
+    let subContainer = document.createElement('div');
+    subContainer.id = 'subContainer';
+    subContainer.style.display = 'flex';
+    subContainer.style.justifyContent = 'space-between';
+    subContainer.style.alignItems = 'center';
+    subContainer.style.width = '100%';
+    subContainer.style.height = '20%';
+
+    let postedInSubRedditP = document.createElement('p');
+    postedInSubRedditP.innerText = `${link.data.subreddit_name_prefixed}`;
+    postedInSubRedditP.style.textAlign = 'left';
+    postedInSubRedditP.style.paddingLeft = '1rem';
+    subContainer.appendChild(postedInSubRedditP);
+
+    let linkDomainP = document.createElement('p');
+    linkDomainP.innerText = `${link.data.domain}`;
+    linkDomainP.style.textAlign = 'right';
+    linkDomainP.style.paddingRight = '1rem';
+    subContainer.appendChild(linkDomainP);
+
+    headContainer.appendChild(subContainer);
+    linkMainDiv.appendChild(headContainer);
   }
 
   createContent(link) {
@@ -356,16 +397,39 @@ class SlideShowUI {
       return selfPostParagraph;
     }
     this.contentLoadErrorParagraph(link);
+  }
 
-    
+  createThumbNailImg(link) {
+    let linkMainDiv = document.querySelector('#linkMainDiv');
+    let thumbnailOfLink = document.createElement('IMG');
+    thumbnailOfLink.src = link.data.thumbnail;
+    thumbnailOfLink.id = 'ssThumbnail';
+    thumbnailOfLink.style.height = `${link.data.thumbnail_height}px`;
+    thumbnailOfLink.style.width = `${link.data.thumbnail_width}px`;
+    thumbnailOfLink.style.maxWidth = '100%';
+    thumbnailOfLink.style.margin = 'auto';
+    thumbnailOfLink.style.border = '1px solid black';
+    thumbnailOfLink.style.marginBottom = '1rem';
+    thumbnailOfLink.style.borderRadius = '3px';
+    thumbnailOfLink.onclick = function() {
+      window.open(link.data.url);
+    }
+    thumbnailOfLink.onmouseover = function() {
+      thumbnailOfLink.style.cursor = 'pointer';
+    }
+    linkMainDiv.appendChild(thumbnailOfLink);
+
   }
 
   contentLoadErrorParagraph(link) {
     let textLink = document.createElement('span');
-    let sorryParagraph = document.createElement('p');
-    let sorryText = `Unable to load content.`;
     textLink.style.color = '#AAF';
     textLink.innerText = ` Click here to view`;
+    let sorryParagraph = document.createElement('p');
+    let sorryText = `Unable to load content.`;
+    sorryParagraph.innerText = sorryText;
+    sorryParagraph.style.padding = '2px';
+
     textLink.onclick = function() {
       window.open('.'+link.data.permalink);
     }
@@ -376,12 +440,14 @@ class SlideShowUI {
     textLink.onmouseout = function() {
       textLink.style.color = '#AAF';
     }
-
-
-    sorryParagraph.innerText = sorryText;
-    sorryParagraph.style.padding = '2px';
+    try {
+      this.createThumbNailImg(link);
+    } catch(error) {
+      throw error;
+    }
     linkMainDiv.appendChild(sorryParagraph);
     sorryParagraph.appendChild(textLink);
+    console.log(`Unable to load contents of\n`, this.mainLink,  `\nCounter: ${this.counter} of ${this.links.length} available links`);
   }
 
   hideAllBodyNodes() {
@@ -458,7 +524,7 @@ const createSlideShowTab = function() {
   tabs.appendChild(newTab);
 }
 
-//window.addEventListener('load', createSlideShowTab());
+window.addEventListener('load', createSlideShowTab());
 // createSlideShowTab();
 
-let Slide = new SlideShow()
+//let Slide = new SlideShow()

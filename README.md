@@ -7,6 +7,7 @@ Supports following link domains:
 i.imgur.com
 i.redd.it
 gfycat.com
+self.reddit
 Or any direct link to a common image or video file
 
 Installation:
