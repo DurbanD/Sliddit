@@ -384,14 +384,16 @@ class SlideShowUI {
       let selfPostParagraph = document.createElement('p');
       if (link.data.selftext.length > 0) {
         selfPostParagraph.innerText = link.data.selftext;
-        selfPostParagraph.style.textAlign = 'center';
+        selfPostParagraph.style.textAlign = 'left';
         selfPostParagraph.style.fontSize = '0.85rem';
         selfPostParagraph.style.maxWidth = '80%';
         selfPostParagraph.style.maxHeight = '90%';
         selfPostParagraph.style.overflowY = 'auto';
         selfPostParagraph.style.border = '1px solid rgba(200,200,200,0.3)';
         selfPostParagraph.style.borderRadius = '5px';
-        selfPostParagraph.style.padding = '0.5rem';
+        selfPostParagraph.style.padding = '1rem';
+        selfPostParagraph.style.paddingLeft = '1rem';
+        selfPostParagraph.style.paddingTop = '1rem';
         linkMainDiv.appendChild(selfPostParagraph);
       }
       return selfPostParagraph;
@@ -447,7 +449,7 @@ class SlideShowUI {
     }
     linkMainDiv.appendChild(sorryParagraph);
     sorryParagraph.appendChild(textLink);
-    console.log(`Unable to load contents of\n`, this.mainLink,  `\nCounter: ${this.counter} of ${this.links.length} available links`);
+    console.log(`Unable to load contents of\n`, this.mainLink.data,  `\nCounter: ${this.counter} of ${this.links.length} available links`);
   }
 
   hideAllBodyNodes() {
