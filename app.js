@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Sliddit
 // @namespace    http://www.github.com/DurbanD/Sliddit/
-// @version      0.1
+// @version      0.2
 // @description  Full-Screen Slideshow browsing for Reddit
 // @author       Durban
 // @match        https://www.reddit.com/*
