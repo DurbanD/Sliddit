@@ -15,8 +15,12 @@ class SlideShow {
     this.counter = counter;
     this.fetchJsonDefaultString = './.json?limit=100';
     this.lastLink = {};
-
-    this.getMoreLinks(this.links).then(()=>this.updateUI(this.links, this.counter)).then(()=>this.createKeyDownListeners()).then(()=>this.getManyMoreLinks(5));
+    if (parseInt(counter) >= parseInt(Object.keys(links).length)-50) {
+      this.getMoreLinks(this.links).then(()=>this.updateUI(this.links, this.counter)).then(()=>this.createKeyDownListeners()).then(()=>this.getManyMoreLinks(5));
+    }
+    else {
+      this.createKeyDownListeners();
+    }
   }
 
   async getMoreLinks(linksPrimary) {
@@ -51,7 +55,7 @@ class SlideShow {
 
   nextLink() {
     this.counter++;
-    if ((this.counter+1)/this.links.length >= 0.8) {
+    if ((this.counter+1)/this.links.length >= 0.5) {
       this.getMoreLinks(this.links).then(()=> this.currentLink = this.getCurrentLink());
     }
     this.updateUI(this.links, this.counter);
@@ -59,7 +63,7 @@ class SlideShow {
 
   previousLink() {
     this.counter--;
-    if (this.counter == 0) {
+    if (this.counter < 0) {
       console.log('You are at the beginning.');
       this.counter = 0;
       this.updateUI(this.links, this.counter);
@@ -69,7 +73,7 @@ class SlideShow {
   }
 
   createKeyDownListeners() {
-    document.body.addEventListener('keydown', (event) => {
+    let keyHandler = () => {
       if (event.code == 'ArrowRight') {
         event.preventDefault();
         this.nextLink();
@@ -86,13 +90,31 @@ class SlideShow {
         event.preventDefault();
         window.open('.'+ this.currentLink.data.permalink);
       }
-    });
+    };
+    return document.body.addEventListener('keydown', keyHandler);
+  }
+
+  createNavigationListeners() {
+    let ssNext = document.getElementById('ssNextButton');
+    let ssPrevious = document.getElementById('ssPreviousButton');
+    let nextLinkListenerFunction = () => {
+      this.nextLink();
+    };
+    let previousLinkListenerFunction = () => {
+      this.previousLink();
+    };
+    if (ssNext && ssPrevious) {
+      ssNext.addEventListener('click', nextLinkListenerFunction);
+      ssPrevious.addEventListener('click', previousLinkListenerFunction);
+    }
   }
 
   updateUI(links,counter) {
     this.lastLink = this.getLastAvailableLink();
     this.currentLink = this.getCurrentLink();
-    return new SlideShowUI(links, counter).generateUI();
+    let updatedSlideUI = new SlideShowUI(links, counter);
+    updatedSlideUI.generateUI();
+    this.createNavigationListeners();
   }
 
 
@@ -112,11 +134,15 @@ class SlideShow {
 
 }
 
-
-
-
-
-
+//
+/////
+/////////
+/////////////
+////////////////////
+////////////
+/////////
+/////
+//
 
 class SlideShowUI {
   constructor(links, counter) {
@@ -182,7 +208,7 @@ class SlideShowUI {
     linkMainDiv.style.maxHeight = '95%';
     linkMainDiv.style.maxWidth = '1600px';
     linkMainDiv.style.zIndex = '100';
-    linkMainDiv.style.padding = '1rem';
+    linkMainDiv.style.padding = '1rem 1rem 0.25rem 1rem';
     linkMainDiv.style.boxSizing = 'border-box';
     linkMainDiv.style.textAlign = 'center';
     linkMainDiv.style.border = '1px dotted black';
@@ -197,59 +223,180 @@ class SlideShowUI {
     slideBG.appendChild(linkMainDiv);
   }
 
-  createHead(link) {
+  createHead(links, counter) {
+    let link = links[counter];
     let linkMainDiv = document.querySelector('#linkMainDiv');
+    let generateLinkHead = function(link) {
+      let linkHead = document.createElement('h3');
+      linkHead.innerText = link.data.title;
+      linkHead.style.fontSize = '1rem';
+      linkHead.style.lineHeight = '1rem';
+      linkHead.style.textAlign = 'center';
+      linkHead.style.padding = '5px 10px 5px 10px';
+      linkHead.id = 'linkHead';
+      linkHead.style.color = '#CCF';
 
-    let headContainer = document.createElement('div');
-    headContainer.style.display = 'flex';
-    headContainer.flexFlow = 'column';
-    headContainer.id = 'headContainer';
-    headContainer.style.width = '100%';
-    headContainer.style.height = '80%';
-    headContainer.style.margin = '0 1rem 2rem 1rem';
-    headContainer.style.flexWrap = 'wrap';
-    headContainer.style.textAlign = 'center';
-    headContainer.style.justifyContent = 'center';
+      linkHead.onclick = function() {
+        window.open('.'+link.data.permalink);
+      }
+      linkHead.onmouseover = function() {
+        linkHead.style.cursor = 'pointer';
+      }
 
-    let linkHead = document.createElement('h3');
-    linkHead.innerText = link.data.title;
-    linkHead.style.fontSize = '1rem';
-    linkHead.style.lineHeight = '1rem';
-    linkHead.style.textAlign = 'center';
-    linkHead.style.padding = '5px 10px 5px 10px';
-    linkHead.id = 'linkHead';
-    linkHead.style.color = '#CCF';
-
-    linkHead.onclick = function() {
-      window.open('.'+link.data.permalink);
+      return linkHead;
     }
-    linkHead.onmouseover = function() {
-      linkHead.style.cursor = 'pointer';
+
+    let generateSubContainer = function(link) {
+      let subContainer = document.createElement('div');
+      subContainer.id = 'subContainer';
+      subContainer.style.display = 'flex';
+      subContainer.style.justifyContent = 'space-between';
+      subContainer.style.alignItems = 'center';
+      subContainer.style.width = '100%';
+      subContainer.style.height = '20%';
+
+      let postedInSubRedditP = document.createElement('p');
+      postedInSubRedditP.innerText = `${link.data.subreddit_name_prefixed}`;
+      postedInSubRedditP.style.textAlign = 'left';
+      postedInSubRedditP.style.paddingLeft = '1rem';
+      postedInSubRedditP.onclick = () => {
+        window.open(`./${link.data.subreddit_name_prefixed}`);
+      }
+      postedInSubRedditP.onmouseover = () => {
+        postedInSubRedditP.style.cursor = 'pointer';
+        postedInSubRedditP.style.color = 'white';
+      }
+      postedInSubRedditP.onmouseout = () => {
+        postedInSubRedditP.style.color = 'rgb(204,204,204)';
+      }
+      subContainer.appendChild(postedInSubRedditP);
+
+      let linkDomainP = document.createElement('p');
+      linkDomainP.innerText = `${link.data.domain}`;
+      linkDomainP.style.textAlign = 'right';
+      linkDomainP.style.paddingRight = '1rem';
+      linkDomainP.onclick = () => {
+        window.open(`${link.data.url}`);
+      }
+      linkDomainP.onmouseover = () => {
+        linkDomainP.style.cursor = 'pointer';
+        linkDomainP.style.color = 'white';
+      }
+      linkDomainP.onmouseout = () => {
+        linkDomainP.style.color = 'rgb(204,204,204)';
+      }
+      subContainer.appendChild(linkDomainP);
+
+      return subContainer;
     }
-    headContainer.appendChild(linkHead);
 
-    let subContainer = document.createElement('div');
-    subContainer.id = 'subContainer';
-    subContainer.style.display = 'flex';
-    subContainer.style.justifyContent = 'space-between';
-    subContainer.style.alignItems = 'center';
-    subContainer.style.width = '100%';
-    subContainer.style.height = '20%';
+    let generateHeaderThirdRow = function(links, counter) {
+      let link = links[counter];
+      let thirdRow = document.createElement('div');
+      thirdRow.style.width = '100%';
+      thirdRow.style.display = 'flex';
+      thirdRow.style.justifyContent = 'space-between';
+      thirdRow.style.alignItems = 'center';
+      thirdRow.style.textAlign = 'center';
+      thirdRow.style.marginTop = '0.5rem';
 
-    let postedInSubRedditP = document.createElement('p');
-    postedInSubRedditP.innerText = `${link.data.subreddit_name_prefixed}`;
-    postedInSubRedditP.style.textAlign = 'left';
-    postedInSubRedditP.style.paddingLeft = '1rem';
-    subContainer.appendChild(postedInSubRedditP);
+      let generateLeftNav = function(links,counter) {
+        let leftNav = document.createElement('div');
+        leftNav.innerText = '<';
+        leftNav.id = 'ssPreviousButton'
+        leftNav.style.height = '100%';
+        leftNav.style.width = '1.5rem';
+        leftNav.style.border = '1px solid rgba(225,225,255, 0.3)';
+        leftNav.style.borderRadius = '5px';
+        leftNav.style.color = '1px solid rgba(225,225,255, 0.8)';
+        leftNav.style.paddingTop = '12px';
+        leftNav.style.marginTop = '5px';
+        if (counter != 0) {
+          leftNav.onmouseover = function() {
+            leftNav.style.cursor = 'pointer';
+          };
+        }
+        return leftNav;
+      }
 
-    let linkDomainP = document.createElement('p');
-    linkDomainP.innerText = `${link.data.domain}`;
-    linkDomainP.style.textAlign = 'right';
-    linkDomainP.style.paddingRight = '1rem';
-    subContainer.appendChild(linkDomainP);
+      let generateRightNav = function(links,counter) {
+        let rightNav = document.createElement('div');
+        rightNav.innerText = '>';
+        rightNav.id = 'ssNextButton';
+        rightNav.style.height = '100%';
+        rightNav.style.width = '1.5rem';
+        rightNav.style.border = '1px solid rgba(225,225,255, 0.3)';
+        rightNav.style.borderRadius = '5px';
+        rightNav.style.color = '1px solid rgba(225,225,255, 0.8)';
+        rightNav.style.paddingTop = '12px';
+        rightNav.style.marginTop = '5px';
+        rightNav.onmouseover = function() {
+          rightNav.style.cursor = 'pointer';
+        }
+        return rightNav;
+      }
 
-    headContainer.appendChild(subContainer);
-    linkMainDiv.appendChild(headContainer);
+      let generateAlerts = function(link) {
+        let nsfwStatus = link.data.over_18;
+        let quarantineStatus = link.data.quarantine;
+        let alertDisplayFlex = document.createElement('div');
+        alertDisplayFlex.style.display = 'flex';
+        alertDisplayFlex.style.justifyContent = 'center';
+        alertDisplayFlex.style.alignItems = 'center';
+        alertDisplayFlex.style.width = '100%';
+        alertDisplayFlex.style.textAlign = 'center';
+  
+        let alertNSFW = document.createElement('p');
+        alertNSFW.style.display = 'inline';
+        alertNSFW.innerText = 'NSFW';
+        alertNSFW.style.color = 'darkred';
+        alertNSFW.style.border = '1px solid darkred';
+        alertNSFW.style.borderRadius = '5px';
+        alertNSFW.style.padding = '0 .5rem 0 .5rem';
+  
+        let alertQuarantine = document.createElement('p');
+        alertQuarantine.style.display = 'inline';
+        alertQuarantine.innerText = 'Quarantine';
+        alertQuarantine.style.color = 'black';
+        alertQuarantine.style.border = '1px solid yellow';
+        alertQuarantine.style.background = 'yellow';
+        alertQuarantine.style.borderRadius = '5px';
+        alertQuarantine.style.padding = '0 .5rem 0 .5rem';
+  
+        if (nsfwStatus == true) {
+          alertDisplayFlex.appendChild(alertNSFW);
+        }
+        if (quarantineStatus == true) {
+          alertDisplayFlex.appendChild(alertQuarantine);
+        }
+  
+        return alertDisplayFlex;
+      }
+      thirdRow.appendChild(generateLeftNav(links,counter));
+      thirdRow.appendChild(generateAlerts(link));
+      thirdRow.appendChild(generateRightNav(links,counter));
+      return thirdRow;
+    }
+
+    let generateHeadContainer = function(link) {
+      let headContainer = document.createElement('div');
+      headContainer.style.display = 'flex';
+      headContainer.flexFlow = 'column';
+      headContainer.id = 'headContainer';
+      headContainer.style.width = '100%';
+      headContainer.style.height = '80%';
+      headContainer.style.margin = '0 1rem 2rem 1rem';
+      headContainer.style.flexWrap = 'wrap';
+      headContainer.style.textAlign = 'center';
+      headContainer.style.justifyContent = 'center';
+
+      headContainer.appendChild(generateLinkHead(link));
+      headContainer.appendChild(generateSubContainer(link));
+      headContainer.appendChild(generateHeaderThirdRow(links, counter));
+      return headContainer;
+    }
+    
+    linkMainDiv.appendChild(generateHeadContainer(link));
   }
 
   createContent(link) {
@@ -386,7 +533,8 @@ class SlideShowUI {
         selfPostParagraph.innerText = link.data.selftext;
         selfPostParagraph.style.textAlign = 'left';
         selfPostParagraph.style.fontSize = '0.85rem';
-        selfPostParagraph.style.maxWidth = '80%';
+        selfPostParagraph.style.maxWidth = '1200px';
+        selfPostParagraph.style.width = '80%';
         selfPostParagraph.style.maxHeight = '90%';
         selfPostParagraph.style.overflowY = 'auto';
         selfPostParagraph.style.border = '1px solid rgba(200,200,200,0.3)';
@@ -449,7 +597,79 @@ class SlideShowUI {
     }
     linkMainDiv.appendChild(sorryParagraph);
     sorryParagraph.appendChild(textLink);
-    console.log(`Unable to load contents of\n`, this.mainLink.data,  `\nCounter: ${this.counter} of ${this.links.length} available links`);
+    console.log(`Unable to load content for: \n`, this.mainLink.data,  `\nCounter: ${this.counter} of ${this.links.length} available links`);
+  }
+
+  createFooter(links, counter) {
+    let linkMainDiv = document.querySelector('#linkMainDiv');
+    let currentLink = links[counter];
+    let generateFooterDiv = function() {
+      let footerDiv = document.createElement('div');
+      footerDiv.style.width = '100%';
+      footerDiv.style.height = '2rem';
+      footerDiv.style.display = 'flex';
+      footerDiv.style.justifyContent = 'center';
+      footerDiv.style.alignItems = 'center';
+      footerDiv.style.padding = '0.5rem 0';
+      footerDiv.style.margin = '0.5rem 2rem 0 2rem';
+      return footerDiv;
+    }
+    let generateCenterInfo = function(link) {
+      let postedBy = link.data.author;
+      let commentCount = link.data.num_comments;
+      let karmaCount = link.data.ups;
+      let centerInfoBox = document.createElement('div');
+      centerInfoBox.style.width = '50%';
+      centerInfoBox.style.maxWidth = '600px';
+      centerInfoBox.style.height = '100%';
+      centerInfoBox.style.display = 'flex';
+      centerInfoBox.style.justifyContent = 'space-around';
+      centerInfoBox.style.alignItems = 'center';
+      centerInfoBox.style.textAlign = 'center';
+      centerInfoBox.style.borderTop = '1px solid rgba(150,150,250,0.2)';
+      let generateKarmaCountP = function(karmaCount) {
+        let karmaCountP = document.createElement('p');
+        karmaCountP.innerText = `${karmaCount} Karma`;
+        return karmaCountP;
+      }
+      let generatePostedByP = function(postedBy) {
+        let postedByInfoP = document.createElement('p');
+        postedByInfoP.innerText = `Posted by ${postedBy}`;
+        postedByInfoP.onclick = () => {
+          window.open(`./u/${postedBy}`);
+        }
+        postedByInfoP.onmouseover = () => {
+          postedByInfoP.style.cursor = 'pointer';
+          postedByInfoP.style.color = 'white';
+        }
+        postedByInfoP.onmouseout = () => {
+          postedByInfoP.style.color = 'rgb(204,204,204)';
+        }
+        return postedByInfoP;
+      }
+      let generateCommentCountP = function(commentCount) {
+        let commentInfoP = document.createElement('p');
+        commentInfoP.innerText = `${commentCount} Comments`;
+        commentInfoP.onclick = () => {
+          window.open('.'+link.data.permalink);
+        }
+        commentInfoP.onmouseover = () => {
+          commentInfoP.style.cursor = 'pointer';
+          commentInfoP.style.color = 'white';
+        }
+        commentInfoP.onmouseout = () => {
+          commentInfoP.style.color = 'rgb(204,204,204)';
+        }
+        return commentInfoP;
+      }
+      centerInfoBox.appendChild(generateKarmaCountP(karmaCount));
+      centerInfoBox.appendChild(generatePostedByP(postedBy));
+      centerInfoBox.appendChild(generateCommentCountP(commentCount));
+      return centerInfoBox;
+    }
+    let footerDiv = generateFooterDiv();
+    footerDiv.appendChild(generateCenterInfo(currentLink));
+    linkMainDiv.appendChild(footerDiv);
   }
 
   hideAllBodyNodes() {
@@ -496,8 +716,9 @@ class SlideShowUI {
     }
 
     this.destroyContainerContents();
-    this.createHead(this.mainLink); 
+    this.createHead(this.links, this.counter); 
     this.createContent(this.mainLink);
+    this.createFooter(this.links, this.counter);
     this.updateExitButtonListener(this.links, this.counter);
   }
 }
@@ -528,5 +749,4 @@ const createSlideShowTab = function() {
 
 window.addEventListener('load', createSlideShowTab());
 // createSlideShowTab();
-
 //let Slide = new SlideShow()
