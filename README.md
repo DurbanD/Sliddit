@@ -1,8 +1,8 @@
 # Sliddit
 
-## Full-screen Reddit
+#### Full-screen Reddit
 
-Script to browse your current Reddit session as a slideshow. Minimal UI, use Arrow Keys to navigate. 
+Script to browse your current Reddit session as a slideshow. Minimal UI, use arrow keys or mouse to navigate. 
 
 ### Overview & Features
 Sliddit fundamentally changes the browsing experience for Reddit.com to a one-link per page semi-full-screen card-like version. Navigation can be easily accomplished with the arrow keys or the mouse.

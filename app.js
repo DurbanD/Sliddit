@@ -16,7 +16,7 @@ class SlideShow {
     this.fetchJsonDefaultString = './.json?limit=100';
     this.lastLink = {};
     if (parseInt(counter) >= parseInt(Object.keys(links).length)-50) {
-      this.getMoreLinks(this.links).then(()=>this.updateUI(this.links, this.counter)).then(()=>this.createKeyDownListeners()).then(()=>this.getManyMoreLinks(5));
+      this.getMoreLinks(this.links).then(()=>this.updateUI(this.links, this.counter)).then(()=>this.createKeyDownListeners()).then(()=>this.getManyMoreLinks(2));
     }
     else {
       this.createKeyDownListeners();
@@ -97,6 +97,7 @@ class SlideShow {
   createNavigationListeners() {
     let ssNext = document.getElementById('ssNextButton');
     let ssPrevious = document.getElementById('ssPreviousButton');
+    let ssExit = document.getElementById('ssExit');
     let nextLinkListenerFunction = () => {
       this.nextLink();
     };
@@ -107,6 +108,9 @@ class SlideShow {
       ssNext.addEventListener('click', nextLinkListenerFunction);
       ssPrevious.addEventListener('click', previousLinkListenerFunction);
     }
+    ssExit.addEventListener('click', () => {
+      this.exitSlideShow();
+    })
   }
 
   updateUI(links,counter) {
@@ -192,13 +196,6 @@ class SlideShowUI {
     return slideBG.appendChild(exitButtonDiv);
   }
 
-  updateExitButtonListener(links, counter) {
-    let exitButtonDiv = document.querySelector('#ssExit');
-    exitButtonDiv.onclick = function() {
-      return new SlideShow(links, counter).exitSlideShow();
-    };
-  }
-
   createContentContainer() {
     let linkMainDiv = document.createElement('div');
     let slideBG = document.querySelector('#slideShowBG');
@@ -237,7 +234,7 @@ class SlideShowUI {
       linkHead.style.color = '#CCF';
 
       linkHead.onclick = function() {
-        window.open('.'+link.data.permalink);
+        window.open(link.data.permalink);
       }
       linkHead.onmouseover = function() {
         linkHead.style.cursor = 'pointer';
@@ -269,7 +266,6 @@ class SlideShowUI {
       postedInSubRedditP.onmouseout = () => {
         postedInSubRedditP.style.color = 'rgb(204,204,204)';
       }
-      subContainer.appendChild(postedInSubRedditP);
 
       let linkDomainP = document.createElement('p');
       linkDomainP.innerText = `${link.data.domain}`;
@@ -285,6 +281,8 @@ class SlideShowUI {
       linkDomainP.onmouseout = () => {
         linkDomainP.style.color = 'rgb(204,204,204)';
       }
+
+      subContainer.appendChild(postedInSubRedditP);
       subContainer.appendChild(linkDomainP);
 
       return subContainer;
@@ -402,152 +400,176 @@ class SlideShowUI {
   createContent(link) {
     let linkMainDiv = document.querySelector('#linkMainDiv');
 
-    if (/\.jpg$/.test(link.data.url) || /\.jpeg$/.test(link.data.url) || 
-    /\.png$/.test(link.data.url) || /\.bmp$/.test(link.data.url) || 
-    /\.tiff$/.test(link.data.url) || /\.gif$/.test(link.data.url)) {
-      let linkImg = document.createElement('IMG');
-      linkImg.src = link.data.url;
-      linkImg.id = 'ssImg';
-      linkImg.style.maxHeight = '100%';
-      linkImg.style.maxWidth = '100%';
-      linkImg.style.margin = 'auto';
-      linkImg.style.border = '1px solid black';
-      linkImg.onclick = function() {
-        window.open(linkImg.src);
-      }
-      linkImg.onmouseover = function() {
-        linkImg.style.cursor = 'pointer';
-      }
-      linkMainDiv.appendChild(linkImg);
-      return linkImg;
+
+    let styleImgContent = (content) => {
+      content.style.maxHeight = '100%';
+      content.style.maxWidth = '100%';
+      content.style.margin = 'auto';
+      content.style.border = '1px solid black';
+      return content;
     }
 
-    if (/\.webm$/.test(link.data.url) || /\.gifv$/.test(link.data.url) || 
-    /\.mp4$/.test(link.data.url) || /\.flv$/.test(link.data.url) || 
-    /\.mkv$/.test(link.data.url) || /\.avi$/.test(link.data.url) || 
-    /\.mpeg$/.test(link.data.url) || /\.mov$/.test(link.data.url)) {
-      let linkVid = document.createElement('video');
-      linkVid.id = 'ssVid';
-      linkVid.style.maxHeight = '100%';
-      linkVid.style.maxWidth = '100%';
-      linkVid.autoplay = true;
-      linkVid.controls = true;
-      linkVid.loop = true;
-      linkVid.muted = false;
-
-      let vidSourceWebm = document.createElement('source');
-      vidSourceWebm.src = link.data.url;
-      vidSourceWebm.type = 'video/webm';
-      let vidSourceMp4 = document.createElement('source');
-      vidSourceMp4.src = link.data.url;
-      vidSourceMp4.type = 'video/mp4';
-      linkVid.appendChild(vidSourceMp4);
-      linkVid.appendChild(vidSourceWebm);
-      linkMainDiv.appendChild(linkVid);
-      return linkVid;
+    let styleVideoContent = (content) => {
+      content.style.maxHeight = '100%';
+      content.style.maxWidth = '100%';
+      content.autoplay = true;
+      content.controls = true;
+      content.loop = true;
+      content.muted = false;
+      return content;
     }
 
-    if (link.data.domain == "i.imgur.com" || link.data.domain == 'i.redd.it') {
-      let linkImg = document.createElement('IMG');
-      linkImg.src = link.data.url;
-      linkImg.id = 'ssImg';
-      linkImg.style.maxHeight = '100%';
-      linkImg.style.maxWidth = '100%';
-      linkImg.style.margin = 'auto';
-      linkImg.style.border = '1px solid black';
-      linkImg.onclick = function() {
-        window.open(linkImg.src);
-      }
-      linkImg.onmouseover = function() {
-        linkImg.style.cursor = 'pointer';
-      }
-      linkMainDiv.appendChild(linkImg);
-      return linkImg;
-    }
-    if (link.data.domain == "imgur.com") {
-      let linkImg = document.createElement('IMG');
-      linkImg.src = link.data.url + '.jpg';
-      linkImg.id = 'ssImg';
-      linkImg.style.maxHeight = '100%';
-      linkImg.style.maxWidth = '100%';
-      linkImg.style.margin = 'auto';
-      linkImg.style.border = '1px solid black';
-      linkImg.onclick = function() {
-        window.open(linkImg.src);
-      }
-      linkImg.onmouseover = function() {
-        linkImg.style.cursor = 'pointer';
-      }
-      linkMainDiv.appendChild(linkImg);
-      return linkImg;
+    let styleTextContent = (content) => {
+      content.style.textAlign = 'left';
+      content.style.fontSize = '0.85rem';
+      content.style.maxWidth = '1200px';
+      content.style.width = '80%';
+      content.style.maxHeight = '90%';
+      content.style.overflowY = 'auto';
+      content.style.border = '1px solid rgba(200,200,200,0.3)';
+      content.style.borderRadius = '5px';
+      content.style.padding = '1rem';
+      content.style.paddingLeft = '1rem';
+      content.style.paddingTop = '1rem';
+      return content;
     }
 
-    //Video//
+    let generateContentFromGenericImageURL = () => {
+      let extensions = [/\.jpg$/, /\.jpeg$/, /\.png$/, /\.bmp$/, /\.tiff$/, /\.gif$/];
+      for (let i = 0; i < extensions.length; i++) {
+        if (extensions[i].test(link.data.url)){
+          let linkImg = document.createElement('IMG');
+          linkImg.src = link.data.url;
+          linkImg.id = 'ssImg';
+          styleImgContent(linkImg);
 
-    if (link.data.domain == "gfycat.com") {
-      let linkVid = document.createElement('video');
-      linkVid.id = 'ssVid';
-      linkVid.style.maxHeight = '100%';
-      linkVid.style.maxWidth = '100%';
-      linkVid.autoplay = true;
-      linkVid.controls = true;
-      linkVid.loop = true;
-      linkVid.muted = false;
-
-      let gfyGiantBase = 'https://giant.gfycat.com';
-      let gfyThumbBase = 'https://thumbs.gfycat.com';
-      let linkSource;
-      if (link.data.secure_media != null && /\/\w+(?:-)/.test(link.data.secure_media.oembed.thumbnail_url) == true) {
-        linkSource = link.data.secure_media.oembed.thumbnail_url.match(/\/\w+(?:-)/).join().replace('-','');
-      } else if (link.data.secure_media == null && /\/\w+(?:-)/.test(link.data.crosspost_parent_list[0].secure_media.oembed.thumbnail_url) == true){
-        linkSource = link.data.crosspost_parent_list[0].secure_media.oembed.thumbnail_url.match(/\/\w+(?:-)/).join().replace('-',''); 
-      } else {
-        linkSource = link.data.url;
+          linkImg.onclick = function() {
+            window.open(linkImg.src);
+          }
+          linkImg.onmouseover = function() {
+            linkImg.style.cursor = 'pointer';
+          }
+          return linkImg;
+        }
       }
+      return null;
+    };
 
-      let vidSourceMobile = document.createElement('source');
-      vidSourceMobile.src = gfyThumbBase + linkSource + '-mobile.mp4';
-      vidSourceMobile.type = 'video/mp4';
-      let vidSourceWebm = document.createElement('source');
-      vidSourceWebm.src = gfyGiantBase + linkSource + '.webm';
-      vidSourceWebm.type = 'video/webm';
-      let vidSourceMP4 = document.createElement('source');
-      vidSourceMP4.src = gfyGiantBase + linkSource + '.mp4';
-      vidSourceMP4.type = 'video/mp4';
-      let vidSourceMP4Mobile = document.createElement('source');
-      vidSourceMP4Mobile.src = gfyGiantBase + linkSource + '-mobile.mp4';
-      vidSourceMP4Mobile.type = 'video/mp4';
-      linkVid.appendChild(vidSourceMobile);
-      linkVid.appendChild(vidSourceWebm);
-      linkVid.appendChild(vidSourceMP4);
-      linkVid.appendChild(vidSourceMP4Mobile);
-      linkMainDiv.appendChild(linkVid);
-      return linkVid;
+    let generateContentFromGenericVideoURL = () => {
+      let extensions = [/\.webm$/, /\.gifv$/, /\.mp4$/, /\.flv$/, /\.mkv$/, /\.avi$/, /\.mpeg$/, /\.mov$/];
+      for (let i = 0; i < extensions.length; i++) {
+        if (extensions[i].test(link.data.url)){
+          let linkVid = document.createElement('video');
+          linkVid.id = 'ssVid';
+          styleVideoContent(linkVid);
+    
+          let vidSourceWebm = document.createElement('source');
+          vidSourceWebm.src = link.data.url;
+          vidSourceWebm.type = 'video/webm';
+          let vidSourceMp4 = document.createElement('source');
+          vidSourceMp4.src = link.data.url;
+          vidSourceMp4.type = 'video/mp4';
+          linkVid.appendChild(vidSourceMp4);
+          linkVid.appendChild(vidSourceWebm);
+          linkMainDiv.appendChild(linkVid);
+          return linkVid;
+        }
+      }
+      return null;
     }
 
-    //Text//
+    let generateContentFromImgurDomain = () => {
+      if (link.data.domain == "imgur.com") {
+        if (/\/a\//.test(link.data.src)) {
+          return this.createThumbNailImg(link);
+        }
+        else {
+          let linkImg = document.createElement('IMG');
+          linkImg.src = link.data.url + '.jpg';
+          linkImg.id = 'ssImg';
+          styleImgContent(linkImg);
+          linkImg.onclick = function() {
+            window.open(linkImg.src);
+          }
+          linkImg.onmouseover = function() {
+            linkImg.style.cursor = 'pointer';
+          }
+          return linkImg;
+        }
+      }
+      return null;
+    }
 
-    if (/^self\./.test(link.data.domain)) {
-      let selfPostParagraph = document.createElement('p');
-      if (link.data.selftext.length > 0) {
+    let generateContentFromGfycatDomain = () => {
+      if (link.data.domain == "gfycat.com") {
+        let linkVid = document.createElement('video');
+        linkVid.id = 'ssVid';
+        styleVideoContent(linkVid);
+
+        let gfyGiantBase = 'https://giant.gfycat.com';
+        let gfyThumbBase = 'https://thumbs.gfycat.com';
+        let linkSource;
+
+        if (link.data.secure_media != null && /\/\w+(?:-)/.test(link.data.secure_media.oembed.thumbnail_url) == true) {
+          linkSource = link.data.secure_media.oembed.thumbnail_url.match(/\/\w+(?:-)/).join().replace('-','');
+        } else if (link.data.secure_media == null && /\/\w+(?:-)/.test(link.data.crosspost_parent_list[0].secure_media.oembed.thumbnail_url) == true){
+          linkSource = link.data.crosspost_parent_list[0].secure_media.oembed.thumbnail_url.match(/\/\w+(?:-)/).join().replace('-',''); 
+        } else {
+          linkSource = link.data.url;
+        }
+
+        let vidSourceMobile = document.createElement('source');
+        vidSourceMobile.src = gfyThumbBase + linkSource + '-mobile.mp4';
+        vidSourceMobile.type = 'video/mp4';
+        let vidSourceWebm = document.createElement('source');
+        vidSourceWebm.src = gfyGiantBase + linkSource + '.webm';
+        vidSourceWebm.type = 'video/webm';
+        let vidSourceMP4 = document.createElement('source');
+        vidSourceMP4.src = gfyGiantBase + linkSource + '.mp4';
+        vidSourceMP4.type = 'video/mp4';
+        let vidSourceMP4Mobile = document.createElement('source');
+        vidSourceMP4Mobile.src = gfyGiantBase + linkSource + '-mobile.mp4';
+        vidSourceMP4Mobile.type = 'video/mp4';
+
+        linkVid.appendChild(vidSourceMobile);
+        linkVid.appendChild(vidSourceWebm);
+        linkVid.appendChild(vidSourceMP4);
+        linkVid.appendChild(vidSourceMP4Mobile);
+
+        return linkVid;
+      }
+      return null;
+    }
+
+    let generateContentFromSelfPost = () => {
+      if (/^self\./.test(link.data.domain) && link.data.selftext.length > 0) {
+        let selfPostParagraph = document.createElement('p');
         selfPostParagraph.innerText = link.data.selftext;
-        selfPostParagraph.style.textAlign = 'left';
-        selfPostParagraph.style.fontSize = '0.85rem';
-        selfPostParagraph.style.maxWidth = '1200px';
-        selfPostParagraph.style.width = '80%';
-        selfPostParagraph.style.maxHeight = '90%';
-        selfPostParagraph.style.overflowY = 'auto';
-        selfPostParagraph.style.border = '1px solid rgba(200,200,200,0.3)';
-        selfPostParagraph.style.borderRadius = '5px';
-        selfPostParagraph.style.padding = '1rem';
-        selfPostParagraph.style.paddingLeft = '1rem';
-        selfPostParagraph.style.paddingTop = '1rem';
-        linkMainDiv.appendChild(selfPostParagraph);
+        styleTextContent(selfPostParagraph);
+        return selfPostParagraph;
+      } else if (/^self\./.test(link.data.domain)) {
+        let selfPostParagraph = document.createElement('p');
+        return selfPostParagraph;
       }
-      return selfPostParagraph;
+      return null;
     }
-    this.contentLoadErrorParagraph(link);
+    
+    let attemptCreation = () => {
+      let possibleContent = [generateContentFromGenericImageURL(), generateContentFromGenericVideoURL(), generateContentFromImgurDomain(), generateContentFromGfycatDomain(), generateContentFromSelfPost()];
+      possibleContent.forEach((item)=> {
+        if (item !== null) {
+          linkMainDiv.appendChild(item);
+          return item;
+        }
+      });
+      if (possibleContent.filter(v=> v !== null).length === 0){
+        this.contentLoadErrorParagraph(link);
+      };
+    }
+
+    attemptCreation();
   }
+
 
   createThumbNailImg(link) {
     let linkMainDiv = document.querySelector('#linkMainDiv');
@@ -719,7 +741,7 @@ class SlideShowUI {
     this.createHead(this.links, this.counter); 
     this.createContent(this.mainLink);
     this.createFooter(this.links, this.counter);
-    this.updateExitButtonListener(this.links, this.counter);
+    // this.updateExitButtonListener(this.links, this.counter);
   }
 }
 
