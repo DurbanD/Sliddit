@@ -1,11 +1,13 @@
 // ==UserScript==
 // @name         Sliddit
 // @namespace    http://www.github.com/DurbanD/Sliddit/
-// @version      0.3
+// @version      0.3.5
 // @description  Full-Screen Slideshow browsing for Reddit
 // @author       Durban
 // @match        https://www.reddit.com/*
 // @match        http://www.reddit.com/*
+// @match        http://old.reddit.com/*
+// @match        https://old.reddit.com/*
 // @grant        none
 // ==/UserScript==
 
@@ -251,6 +253,7 @@ class SlideShowUI {
       subContainer.style.alignItems = 'center';
       subContainer.style.width = '100%';
       subContainer.style.height = '20%';
+      subContainer.style.color = 'rgb(204,204,204)';
 
       let postedInSubRedditP = document.createElement('p');
       postedInSubRedditP.innerText = `${link.data.subreddit_name_prefixed}`;
@@ -306,7 +309,7 @@ class SlideShowUI {
         leftNav.style.width = '1.5rem';
         leftNav.style.border = '1px solid rgba(225,225,255, 0.3)';
         leftNav.style.borderRadius = '5px';
-        leftNav.style.color = '1px solid rgba(225,225,255, 0.8)';
+        leftNav.style.color = 'rgba(225,225,255, 0.8)';
         leftNav.style.paddingTop = '12px';
         leftNav.style.marginTop = '5px';
         if (counter != 0) {
@@ -325,7 +328,7 @@ class SlideShowUI {
         rightNav.style.width = '1.5rem';
         rightNav.style.border = '1px solid rgba(225,225,255, 0.3)';
         rightNav.style.borderRadius = '5px';
-        rightNav.style.color = '1px solid rgba(225,225,255, 0.8)';
+        rightNav.style.color = 'rgba(225,225,255, 0.8)';
         rightNav.style.paddingTop = '12px';
         rightNav.style.marginTop = '5px';
         rightNav.onmouseover = function() {
@@ -634,6 +637,7 @@ class SlideShowUI {
       footerDiv.style.alignItems = 'center';
       footerDiv.style.padding = '0.5rem 0';
       footerDiv.style.margin = '0.5rem 2rem 0 2rem';
+      footerDiv.style.color = 'rgb(204,204,204)';
       return footerDiv;
     }
     let generateCenterInfo = function(link) {
@@ -745,30 +749,50 @@ class SlideShowUI {
   }
 }
 
-const createSlideShowTab = function() {
-  let tabs = document.querySelector('ul.tabmenu');
-  let newTab = document.createElement('li');
-  newTab.innerHTML = '<p>Browse Fullscreen</p>';
-  newTab.classList = tabs.lastChild.classList;
-  newTab.style.color = '#8cb3d9';
-  newTab.style.background = '#262626';
-  newTab.style.padding = '2px 6px 0px 6px';
-  newTab.onmouseover = function() {
-    newTab.style.cursor = 'pointer';
-  }
-  newTab.onclick = function() {
-    if(/count=\d+/.test(document.URL) == true) {
-      let countUrlMethod = document.URL.match(/count=\d+/).join();
-      let countNumber = countUrlMethod.match(/\d+$/).join();
-      let SS_Main = new SlideShow({},parseInt(countNumber-1));
-      return SS_Main;
+const createLaunch = function() {
+  let styleTab = (content) => {
+    content.innerHTML = '<p>Sliddit</p>';
+    content.style.color = '#8cb3d9';
+    content.style.background = '#262626';
+    content.style.padding = '2px 6px 0px 6px';
+    content.onmouseover = function() {
+      content.style.cursor = 'pointer';
     }
-    let Slide = new SlideShow();
-    return Slide;
+    content.onclick = function() {
+      if(/count=\d+/.test(document.URL) == true) {
+        let countUrlMethod = document.URL.match(/count=\d+/).join();
+        let countNumber = countUrlMethod.match(/\d+$/).join();
+        let SS_Main = new SlideShow({},parseInt(countNumber-1));
+        return SS_Main;
+      }
+      let Slide = new SlideShow();
+      return Slide;
+    }
   }
-  tabs.appendChild(newTab);
+  if (document.querySelector('ul.tabmenu')) {
+    let newTab = document.createElement('li');
+    let tabs = document.querySelector('ul.tabmenu');
+    newTab.classList = tabs.lastChild.classList;
+    styleTab(newTab);
+    return tabs.appendChild(newTab);
+  }
+  else {
+    let launchButton = document.createElement('div');
+    launchButton.style.width = '3rem';
+    launchButton.style.height = '1.5rem';
+    launchButton.id = 'ssLaunch';
+    launchButton.style.position = 'fixed';
+    launchButton.style.top = '3rem';
+    launchButton.style.right = '10px';
+    launchButton.style.zIndex = '99';
+    launchButton.style.border = '1px solid rgba(225,225,255,0.2)';
+    launchButton.style.borderTop = 'none';
+    launchButton.style.borderRadius = '5px';
+    styleTab(launchButton);
+    return document.body.appendChild(launchButton);
+  }
 }
 
-window.addEventListener('load', createSlideShowTab());
-// createSlideShowTab();
+window.addEventListener('load', createLaunch());
+// createLaunch();
 //let Slide = new SlideShow()
