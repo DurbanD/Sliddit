@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Sliddit
 // @namespace    http://www.github.com/DurbanD/Sliddit/
-// @version      0.3.5
+// @version      0.4
 // @description  Full-Screen Slideshow browsing for Reddit
 // @author       Durban
 // @match        https://www.reddit.com/*
@@ -160,6 +160,7 @@ class SlideShowUI {
   }
 
   createBackground() {
+    document.body.style.lineHeight = '1rem';
     let fullScreenBackground = document.createElement('div');
     fullScreenBackground.style.position = 'absolute';
     fullScreenBackground.style.left = '0';
@@ -170,7 +171,11 @@ class SlideShowUI {
     fullScreenBackground.style.width = '100vw';
     fullScreenBackground.style.height = '100vh';
     fullScreenBackground.style.overflow = 'hidden';
-    fullScreenBackground.style.padding = '2rem';
+    fullScreenBackground.style.padding = '1rem';
+    fullScreenBackground.style.display = 'flex';
+    fullScreenBackground.style.justifyContent = 'center';
+    fullScreenBackground.style.alignContent = 'flex-start';
+    fullScreenBackground.style.alignItems = 'flex-start';
     fullScreenBackground.id = 'slideShowBG';
     document.body.appendChild(fullScreenBackground);
   };
@@ -202,23 +207,25 @@ class SlideShowUI {
     let linkMainDiv = document.createElement('div');
     let slideBG = document.querySelector('#slideShowBG');
     linkMainDiv.id = "linkMainDiv";
-    linkMainDiv.style.margin = '1rem auto';
-    linkMainDiv.style.width = '95%';
-    linkMainDiv.style.maxHeight = '95%';
+    linkMainDiv.style.width = '95vw';
+    linkMainDiv.style.minHeight = '200px';
+    linkMainDiv.style.maxHeight = '95vh';
     linkMainDiv.style.maxWidth = '1600px';
     linkMainDiv.style.zIndex = '100';
-    linkMainDiv.style.padding = '1rem 1rem 0.25rem 1rem';
+    linkMainDiv.style.padding = '1rem';
     linkMainDiv.style.boxSizing = 'border-box';
     linkMainDiv.style.textAlign = 'center';
     linkMainDiv.style.border = '1px dotted black';
-    linkMainDiv.style.boxShadow = '2px 2px 15px 5px #777, -2px -2px 15px 5px #777';
+    linkMainDiv.style.boxShadow = '2px 2px 10px 5px #777, -2px -2px 10px 5px #777';
     linkMainDiv.style.borderRadius = '5px';
     linkMainDiv.style.display = 'flex';
-    linkMainDiv.style.flexFlow = 'column';
+    linkMainDiv.style.flexFlow = 'column nowrap';
     linkMainDiv.style.alignContent = 'center';
     linkMainDiv.style.alignItems = 'center';
-    linkMainDiv.style.justifyContent = 'center';
+    linkMainDiv.style.justifyContent = 'stretch';
+    linkMainDiv.style.justifyItems = 'stretch';
     linkMainDiv.style.background = 'rgba(225,225,255,0.05)';
+    linkMainDiv.style.overflowY = 'hidden';
     slideBG.appendChild(linkMainDiv);
   }
 
@@ -228,10 +235,10 @@ class SlideShowUI {
     let generateLinkHead = function(link) {
       let linkHead = document.createElement('h3');
       linkHead.innerText = link.data.title;
-      linkHead.style.fontSize = '1rem';
+      linkHead.style.width = '90%';
+      linkHead.style.fontSize = '0.9rem';
       linkHead.style.lineHeight = '1rem';
       linkHead.style.textAlign = 'center';
-      linkHead.style.padding = '5px 10px 5px 10px';
       linkHead.id = 'linkHead';
       linkHead.style.color = '#CCF';
 
@@ -245,61 +252,43 @@ class SlideShowUI {
       return linkHead;
     }
 
-    let generateSubContainer = function(link) {
-      let subContainer = document.createElement('div');
-      subContainer.id = 'subContainer';
-      subContainer.style.display = 'flex';
-      subContainer.style.justifyContent = 'space-between';
-      subContainer.style.alignItems = 'center';
-      subContainer.style.width = '100%';
-      subContainer.style.height = '20%';
-      subContainer.style.color = 'rgb(204,204,204)';
+    let generateHeaderSecondRow = function(links, counter) {
 
-      let postedInSubRedditP = document.createElement('p');
-      postedInSubRedditP.innerText = `${link.data.subreddit_name_prefixed}`;
-      postedInSubRedditP.style.textAlign = 'left';
-      postedInSubRedditP.style.paddingLeft = '1rem';
-      postedInSubRedditP.onclick = () => {
-        window.open(`./${link.data.subreddit_name_prefixed}`);
-      }
-      postedInSubRedditP.onmouseover = () => {
-        postedInSubRedditP.style.cursor = 'pointer';
-        postedInSubRedditP.style.color = 'white';
-      }
-      postedInSubRedditP.onmouseout = () => {
-        postedInSubRedditP.style.color = 'rgb(204,204,204)';
+      let generatePostedIn = () => {
+        let postedInSubRedditP = document.createElement('p');
+        postedInSubRedditP.innerText = `${link.data.subreddit_name_prefixed}`;
+        postedInSubRedditP.style.textAlign = 'left';
+        postedInSubRedditP.style.paddingLeft = '1rem';
+        postedInSubRedditP.onclick = () => {
+          window.open(`./${link.data.subreddit_name_prefixed}`);
+        }
+        postedInSubRedditP.onmouseover = () => {
+          postedInSubRedditP.style.cursor = 'pointer';
+          postedInSubRedditP.style.color = 'white';
+        }
+        postedInSubRedditP.onmouseout = () => {
+          postedInSubRedditP.style.color = 'rgb(204,204,204)';
+        }
+        return postedInSubRedditP;
       }
 
-      let linkDomainP = document.createElement('p');
-      linkDomainP.innerText = `${link.data.domain}`;
-      linkDomainP.style.textAlign = 'right';
-      linkDomainP.style.paddingRight = '1rem';
-      linkDomainP.onclick = () => {
-        window.open(`${link.data.url}`);
+      let generateDomainOrigin = () => {
+        let linkDomainP = document.createElement('p');
+        linkDomainP.innerText = `${link.data.domain}`;
+        linkDomainP.style.textAlign = 'right';
+        linkDomainP.style.paddingRight = '1rem';
+        linkDomainP.onclick = () => {
+          window.open(`${link.data.url}`);
+        }
+        linkDomainP.onmouseover = () => {
+          linkDomainP.style.cursor = 'pointer';
+          linkDomainP.style.color = 'white';
+        }
+        linkDomainP.onmouseout = () => {
+          linkDomainP.style.color = 'rgb(204,204,204)';
+        }
+        return linkDomainP;
       }
-      linkDomainP.onmouseover = () => {
-        linkDomainP.style.cursor = 'pointer';
-        linkDomainP.style.color = 'white';
-      }
-      linkDomainP.onmouseout = () => {
-        linkDomainP.style.color = 'rgb(204,204,204)';
-      }
-
-      subContainer.appendChild(postedInSubRedditP);
-      subContainer.appendChild(linkDomainP);
-
-      return subContainer;
-    }
-
-    let generateHeaderThirdRow = function(links, counter) {
-      let link = links[counter];
-      let thirdRow = document.createElement('div');
-      thirdRow.style.width = '100%';
-      thirdRow.style.display = 'flex';
-      thirdRow.style.justifyContent = 'space-between';
-      thirdRow.style.alignItems = 'center';
-      thirdRow.style.textAlign = 'center';
-      thirdRow.style.marginTop = '0.5rem';
 
       let generateLeftNav = function(links,counter) {
         let leftNav = document.createElement('div');
@@ -310,8 +299,8 @@ class SlideShowUI {
         leftNav.style.border = '1px solid rgba(225,225,255, 0.3)';
         leftNav.style.borderRadius = '5px';
         leftNav.style.color = 'rgba(225,225,255, 0.8)';
-        leftNav.style.paddingTop = '12px';
-        leftNav.style.marginTop = '5px';
+        leftNav.style.padding = '0.75rem 0.25rem';
+        leftNav.style.marginTop = '-2rem';
         if (counter != 0) {
           leftNav.onmouseover = function() {
             leftNav.style.cursor = 'pointer';
@@ -329,8 +318,8 @@ class SlideShowUI {
         rightNav.style.border = '1px solid rgba(225,225,255, 0.3)';
         rightNav.style.borderRadius = '5px';
         rightNav.style.color = 'rgba(225,225,255, 0.8)';
-        rightNav.style.paddingTop = '12px';
-        rightNav.style.marginTop = '5px';
+        rightNav.style.padding = '0.75rem 0.25rem';
+        rightNav.style.marginTop = '-2rem';
         rightNav.onmouseover = function() {
           rightNav.style.cursor = 'pointer';
         }
@@ -344,7 +333,7 @@ class SlideShowUI {
         alertDisplayFlex.style.display = 'flex';
         alertDisplayFlex.style.justifyContent = 'center';
         alertDisplayFlex.style.alignItems = 'center';
-        alertDisplayFlex.style.width = '100%';
+        alertDisplayFlex.style.width = '30%';
         alertDisplayFlex.style.textAlign = 'center';
   
         let alertNSFW = document.createElement('p');
@@ -373,10 +362,22 @@ class SlideShowUI {
   
         return alertDisplayFlex;
       }
-      thirdRow.appendChild(generateLeftNav(links,counter));
-      thirdRow.appendChild(generateAlerts(link));
-      thirdRow.appendChild(generateRightNav(links,counter));
-      return thirdRow;
+
+      let secondRow = document.createElement('div');
+      secondRow.style.width = '100%';
+      secondRow.style.display = 'flex';
+      secondRow.style.justifyContent = 'space-between';
+      secondRow.style.alignItems = 'center';
+      secondRow.style.textAlign = 'center';
+      secondRow.style.marginTop = '0.5rem';
+      secondRow.id = 'secondHeadRow'
+
+      secondRow.appendChild(generateLeftNav(links,counter));
+      secondRow.appendChild(generatePostedIn());
+      secondRow.appendChild(generateAlerts(link));
+      secondRow.appendChild(generateDomainOrigin());
+      secondRow.appendChild(generateRightNav(links,counter));
+      return secondRow;
     }
 
     let generateHeadContainer = function(link) {
@@ -385,15 +386,14 @@ class SlideShowUI {
       headContainer.flexFlow = 'column';
       headContainer.id = 'headContainer';
       headContainer.style.width = '100%';
-      headContainer.style.height = '80%';
-      headContainer.style.margin = '0 1rem 2rem 1rem';
+      headContainer.style.margin = '0 1rem 0.5rem 1rem';
       headContainer.style.flexWrap = 'wrap';
       headContainer.style.textAlign = 'center';
       headContainer.style.justifyContent = 'center';
+      headContainer.style.flex = '0 1 auto';
 
       headContainer.appendChild(generateLinkHead(link));
-      headContainer.appendChild(generateSubContainer(link));
-      headContainer.appendChild(generateHeaderThirdRow(links, counter));
+      headContainer.appendChild(generateHeaderSecondRow(links, counter))
       return headContainer;
     }
     
@@ -403,17 +403,19 @@ class SlideShowUI {
   createContent(link) {
     let linkMainDiv = document.querySelector('#linkMainDiv');
 
-
     let styleImgContent = (content) => {
-      content.style.maxHeight = '100%';
+      content.style.objectFit = 'contain';
+      content.style.height = 'auto';
+      content.style.width = 'auto';
       content.style.maxWidth = '100%';
+      content.style.maxHeight = '80vh';
       content.style.margin = 'auto';
       content.style.border = '1px solid black';
       return content;
     }
 
     let styleVideoContent = (content) => {
-      content.style.maxHeight = '100%';
+      content.style.maxHeight = '75vh';
       content.style.maxWidth = '100%';
       content.autoplay = true;
       content.controls = true;
@@ -434,6 +436,8 @@ class SlideShowUI {
       content.style.padding = '1rem';
       content.style.paddingLeft = '1rem';
       content.style.paddingTop = '1rem';
+      content.style.color = 'rgb(204,204,204)';
+      content.style.lineHeight = '1rem';
       return content;
     }
 
@@ -441,6 +445,9 @@ class SlideShowUI {
       let extensions = [/\.jpg$/, /\.jpeg$/, /\.png$/, /\.bmp$/, /\.tiff$/, /\.gif$/];
       for (let i = 0; i < extensions.length; i++) {
         if (extensions[i].test(link.data.url)){
+          let linkImgContainer = document.createElement('div');
+          linkImgContainer.style.flex = '0 1 auto';
+          linkImgContainer.id = 'ssImgDivWrapper';
           let linkImg = document.createElement('IMG');
           linkImg.src = link.data.url;
           linkImg.id = 'ssImg';
@@ -452,7 +459,9 @@ class SlideShowUI {
           linkImg.onmouseover = function() {
             linkImg.style.cursor = 'pointer';
           }
-          return linkImg;
+
+          linkImgContainer.appendChild(linkImg);
+          return linkImgContainer;
         }
       }
       return null;
@@ -465,16 +474,17 @@ class SlideShowUI {
           let linkVid = document.createElement('video');
           linkVid.id = 'ssVid';
           styleVideoContent(linkVid);
-    
+          let linkSource = link.data.url.replace('.gifv','.mp4');
+
           let vidSourceWebm = document.createElement('source');
-          vidSourceWebm.src = link.data.url;
+          vidSourceWebm.src = linkSource;
           vidSourceWebm.type = 'video/webm';
           let vidSourceMp4 = document.createElement('source');
-          vidSourceMp4.src = link.data.url;
+          vidSourceMp4.src = linkSource;
           vidSourceMp4.type = 'video/mp4';
+
           linkVid.appendChild(vidSourceMp4);
           linkVid.appendChild(vidSourceWebm);
-          linkMainDiv.appendChild(linkVid);
           return linkVid;
         }
       }
@@ -483,8 +493,16 @@ class SlideShowUI {
 
     let generateContentFromImgurDomain = () => {
       if (link.data.domain == "imgur.com") {
-        if (/\/a\//.test(link.data.src)) {
-          return this.createThumbNailImg(link);
+        if (/\/a\//.test(link.data.url)) {
+          let albumNotification = document.createElement('p');
+          styleTextContent(albumNotification);
+          albumNotification.style.width = 'auto';
+          albumNotification.style.border = 'none';
+          albumNotification.style.textAlign = 'center';
+          albumNotification.style.marginTop = '0';
+          this.createThumbNailImg(link);
+          albumNotification.innerText = 'This is an album. Click the thumbnail above to view';
+          return albumNotification;
         }
         else {
           let linkImg = document.createElement('IMG');
@@ -513,6 +531,9 @@ class SlideShowUI {
         let gfyThumbBase = 'https://thumbs.gfycat.com';
         let linkSource;
 
+        if (!link.data.secure_media && !link.data.crosspost_parent_list) {
+          return null;
+        }
         if (link.data.secure_media != null && /\/\w+(?:-)/.test(link.data.secure_media.oembed.thumbnail_url) == true) {
           linkSource = link.data.secure_media.oembed.thumbnail_url.match(/\/\w+(?:-)/).join().replace('-','');
         } else if (link.data.secure_media == null && /\/\w+(?:-)/.test(link.data.crosspost_parent_list[0].secure_media.oembed.thumbnail_url) == true){
@@ -544,6 +565,23 @@ class SlideShowUI {
       return null;
     }
 
+    let generateContentFromCommonVideoDomain = () => {
+      let linkVid = document.createElement('iframe');
+      let keyReg = /(?:viewkey=)\w+(?:&)/;
+      if (keyReg.test(link.data.url)) {
+        let embedKey = link.data.url.match(/(?:viewkey=)\w+(?:&)/).join().replace('viewkey=','').replace('&','');
+        let vidSource = `https://${link.data.domain}/embed/${embedKey}`;
+        let vidWidth = '600';
+        let vidHeight = '350';
+        linkVid.src = vidSource;
+        linkVid.height = vidHeight;
+        linkVid.width = vidWidth;
+        linkVid.allowFullscreen = true;
+        return linkVid;
+      }
+      return null;
+    }
+
     let generateContentFromSelfPost = () => {
       if (/^self\./.test(link.data.domain) && link.data.selftext.length > 0) {
         let selfPostParagraph = document.createElement('p');
@@ -558,7 +596,7 @@ class SlideShowUI {
     }
     
     let attemptCreation = () => {
-      let possibleContent = [generateContentFromGenericImageURL(), generateContentFromGenericVideoURL(), generateContentFromImgurDomain(), generateContentFromGfycatDomain(), generateContentFromSelfPost()];
+      let possibleContent = [generateContentFromGenericImageURL(), generateContentFromGenericVideoURL(), generateContentFromImgurDomain(), generateContentFromGfycatDomain(), generateContentFromSelfPost(), generateContentFromCommonVideoDomain()];
       possibleContent.forEach((item)=> {
         if (item !== null) {
           linkMainDiv.appendChild(item);
@@ -584,7 +622,7 @@ class SlideShowUI {
     thumbnailOfLink.style.maxWidth = '100%';
     thumbnailOfLink.style.margin = 'auto';
     thumbnailOfLink.style.border = '1px solid black';
-    thumbnailOfLink.style.marginBottom = '1rem';
+    thumbnailOfLink.style.marginBottom = '0.5rem';
     thumbnailOfLink.style.borderRadius = '3px';
     thumbnailOfLink.onclick = function() {
       window.open(link.data.url);
@@ -604,6 +642,7 @@ class SlideShowUI {
     let sorryText = `Unable to load content.`;
     sorryParagraph.innerText = sorryText;
     sorryParagraph.style.padding = '2px';
+    sorryParagraph.style.color = 'rgb(204,204,204)';
 
     textLink.onclick = function() {
       window.open('.'+link.data.permalink);
@@ -631,13 +670,13 @@ class SlideShowUI {
     let generateFooterDiv = function() {
       let footerDiv = document.createElement('div');
       footerDiv.style.width = '100%';
-      footerDiv.style.height = '2rem';
       footerDiv.style.display = 'flex';
       footerDiv.style.justifyContent = 'center';
       footerDiv.style.alignItems = 'center';
-      footerDiv.style.padding = '0.5rem 0';
-      footerDiv.style.margin = '0.5rem 2rem 0 2rem';
+      footerDiv.style.margin = '0rem 2rem';
       footerDiv.style.color = 'rgb(204,204,204)';
+      footerDiv.style.flex = '0 0 auto';
+      footerDiv.id = 'ssFooterDiv';
       return footerDiv;
     }
     let generateCenterInfo = function(link) {
@@ -647,7 +686,7 @@ class SlideShowUI {
       let centerInfoBox = document.createElement('div');
       centerInfoBox.style.width = '50%';
       centerInfoBox.style.maxWidth = '600px';
-      centerInfoBox.style.height = '100%';
+      centerInfoBox.style.paddingTop = '0.5rem';
       centerInfoBox.style.display = 'flex';
       centerInfoBox.style.justifyContent = 'space-around';
       centerInfoBox.style.alignItems = 'center';

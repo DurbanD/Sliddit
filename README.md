@@ -26,6 +26,8 @@ Sliddit supports the following Domains. Any other domains, or any link that thro
 * i.redd.it
 * gfycat.com
 * self.reddit
+* .gifv urls
+* Some Embedded video sites
 * Or any direct link to a common image or video file
 
 ### Installation & Requirements:
