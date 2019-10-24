@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Sliddit
 // @namespace    http://www.github.com/DurbanD/Sliddit/
-// @version      0.4
+// @version      0.5
 // @description  Full-Screen Slideshow browsing for Reddit
 // @author       Durban
 // @match        https://www.reddit.com/*
@@ -208,7 +208,7 @@ class SlideShowUI {
     let slideBG = document.querySelector('#slideShowBG');
     linkMainDiv.id = "linkMainDiv";
     linkMainDiv.style.width = '95vw';
-    linkMainDiv.style.minHeight = '200px';
+    linkMainDiv.style.minHeight = '100px';
     linkMainDiv.style.maxHeight = '95vh';
     linkMainDiv.style.maxWidth = '1600px';
     linkMainDiv.style.zIndex = '100';
@@ -567,6 +567,10 @@ class SlideShowUI {
 
     let generateContentFromCommonVideoDomain = () => {
       let linkVid = document.createElement('iframe');
+      linkVid.id = 'ssVidIframe'
+      linkVid.style.marginTop = '1.5rem';
+      linkVid.style.marginBottom = '1rem';
+      linkVid.setAttribute('loop', '');
       let keyReg = /(?:viewkey=)\w+(?:&)/;
       if (keyReg.test(link.data.url)) {
         let embedKey = link.data.url.match(/(?:viewkey=)\w+(?:&)/).join().replace('viewkey=','').replace('&','');
@@ -577,8 +581,53 @@ class SlideShowUI {
         linkVid.height = vidHeight;
         linkVid.width = vidWidth;
         linkVid.allowFullscreen = true;
+        linkVid.style.border = '1px solid black';
         return linkVid;
       }
+      let youTubeWatchCodeReg = /(?:v=)\w+/;
+      if (youTubeWatchCodeReg.test(link.data.url)) {
+        let embedKey =  link.data.url.match(/(?:v=)\w+-{0,1}\w+/).join().replace('v=','');
+        let vidSource = `https://${link.data.domain}/embed/${embedKey}`;
+        let vidWidth = '600';
+        let vidHeight = '350';
+        linkVid.src = vidSource;
+        linkVid.height = vidHeight;
+        linkVid.width = vidWidth;
+        linkVid.allowFullscreen = true;
+        linkVid.style.border = '1px solid black';
+        return linkVid;
+      }
+      if (link.data.domain == 'v.redd.it') {
+        if (link.data.secure_media != null) {
+          let vidSource = link.data.secure_media.reddit_video.fallback_url;
+          linkVid.src = vidSource;
+        } else {
+          let vidKey = link.data.url.match(/(?:\w\/)\w+/).join().replace(/\w\//, '');
+          let vidSource = `https://${link.data.domain}/${vidKey}/DASH_720?source=fallback`;
+          linkVid.src = vidSource;
+        }
+        let vidWidth = '600';
+        let vidHeight = '400';
+        linkVid.height = vidHeight;
+        linkVid.width = vidWidth;
+        linkVid.allowFullscreen = true;
+        linkVid.style.border = '1px solid black';
+        linkVid.align = 'middle';
+        return linkVid;
+      }
+      if (link.data.domain == 'youtu.be') {
+        let embedKey = link.data.url.match(/(?:\w\/)\w+-{0,1}\w+/).join().replace(/(?:\w\/)/,'');
+        let vidSource = `https://www.youtube.com/embed/${embedKey}`;
+        let vidWidth = '600';
+        let vidHeight = '350';
+        linkVid.src = vidSource;
+        linkVid.height = vidHeight;
+        linkVid.width = vidWidth;
+        linkVid.allowFullscreen = true;
+        linkVid.style.border = '1px solid black';
+        return linkVid;
+      }
+
       return null;
     }
 
@@ -673,6 +722,7 @@ class SlideShowUI {
       footerDiv.style.display = 'flex';
       footerDiv.style.justifyContent = 'center';
       footerDiv.style.alignItems = 'center';
+      footerDiv.style.alignSelf = 'flex-end';
       footerDiv.style.margin = '0rem 2rem';
       footerDiv.style.color = 'rgb(204,204,204)';
       footerDiv.style.flex = '0 0 auto';
@@ -784,7 +834,6 @@ class SlideShowUI {
     this.createHead(this.links, this.counter); 
     this.createContent(this.mainLink);
     this.createFooter(this.links, this.counter);
-    // this.updateExitButtonListener(this.links, this.counter);
   }
 }
 
@@ -833,5 +882,4 @@ const createLaunch = function() {
 }
 
 window.addEventListener('load', createLaunch());
-// createLaunch();
 //let Slide = new SlideShow()
