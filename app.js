@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Sliddit
 // @namespace    http://www.github.com/DurbanD/Sliddit/
-// @version      0.5
+// @version      0.6
 // @description  Full-Screen Slideshow browsing for Reddit
 // @author       Durban
 // @match        https://www.reddit.com/*
@@ -174,8 +174,8 @@ class SlideShowUI {
     fullScreenBackground.style.padding = '1rem';
     fullScreenBackground.style.display = 'flex';
     fullScreenBackground.style.justifyContent = 'center';
-    fullScreenBackground.style.alignContent = 'flex-start';
-    fullScreenBackground.style.alignItems = 'flex-start';
+    fullScreenBackground.style.alignContent = 'center';
+    fullScreenBackground.style.alignItems = 'center';
     fullScreenBackground.id = 'slideShowBG';
     document.body.appendChild(fullScreenBackground);
   };
@@ -206,27 +206,31 @@ class SlideShowUI {
   createContentContainer() {
     let linkMainDiv = document.createElement('div');
     let slideBG = document.querySelector('#slideShowBG');
-    linkMainDiv.id = "linkMainDiv";
-    linkMainDiv.style.width = '95vw';
-    linkMainDiv.style.minHeight = '100px';
-    linkMainDiv.style.maxHeight = '95vh';
-    linkMainDiv.style.maxWidth = '1600px';
-    linkMainDiv.style.zIndex = '100';
-    linkMainDiv.style.padding = '1rem';
-    linkMainDiv.style.boxSizing = 'border-box';
-    linkMainDiv.style.textAlign = 'center';
-    linkMainDiv.style.border = '1px dotted black';
-    linkMainDiv.style.boxShadow = '2px 2px 10px 5px #777, -2px -2px 10px 5px #777';
-    linkMainDiv.style.borderRadius = '5px';
-    linkMainDiv.style.display = 'flex';
-    linkMainDiv.style.flexFlow = 'column nowrap';
-    linkMainDiv.style.alignContent = 'center';
-    linkMainDiv.style.alignItems = 'center';
-    linkMainDiv.style.justifyContent = 'stretch';
-    linkMainDiv.style.justifyItems = 'stretch';
-    linkMainDiv.style.background = 'rgba(225,225,255,0.05)';
-    linkMainDiv.style.overflowY = 'hidden';
-    slideBG.appendChild(linkMainDiv);
+    const styleContainer = (content) => {
+      content.id = "linkMainDiv";
+      content.style.background = 'rgba(225,225,255,0.05)';
+      content.style.width = '95vw';
+      content.style.minHeight = '100px';
+      content.style.maxHeight = '90vh';
+      content.style.maxWidth = '1600px';
+      content.style.zIndex = '100';
+      content.style.boxSizing = 'border-box';
+      content.style.textAlign = 'center';
+      content.style.border = '1px dotted black';
+      content.style.boxShadow = '2px 2px 10px 5px #777, -2px -2px 10px 5px #777';
+      content.style.borderRadius = '5px';
+      content.style.overflow = 'hidden';
+      content.style.display = 'grid';
+      content.style.gridTemplateRows = '3rem minmax(50px,75vh) 1.5rem';
+      content.style.gridTemplateRows = '3rem auto 1.5rem';
+      content.style.gridTemplateColumns = '1rem minmax(auto,100%) 1rem';
+      content.style.gridGap = '0.5rem';
+      content.style.padding = '0.5rem 0';
+
+      return content;
+    }
+    styleContainer(linkMainDiv);
+    return slideBG.appendChild(linkMainDiv);
   }
 
   createHead(links, counter) {
@@ -241,6 +245,7 @@ class SlideShowUI {
       linkHead.style.textAlign = 'center';
       linkHead.id = 'linkHead';
       linkHead.style.color = '#CCF';
+      linkHead.style.overflow = 'hidden';
 
       linkHead.onclick = function() {
         window.open(link.data.permalink);
@@ -252,117 +257,134 @@ class SlideShowUI {
       return linkHead;
     }
 
+    let generatePostedIn = () => {
+      let postedInSubRedditP = document.createElement('p');
+      postedInSubRedditP.innerText = `${link.data.subreddit_name_prefixed}`;
+      postedInSubRedditP.style.textAlign = 'left';
+      postedInSubRedditP.style.paddingLeft = '1rem';
+      postedInSubRedditP.onclick = () => {
+        window.open(`./${link.data.subreddit_name_prefixed}`);
+      }
+      postedInSubRedditP.onmouseover = () => {
+        postedInSubRedditP.style.cursor = 'pointer';
+        postedInSubRedditP.style.color = 'white';
+      }
+      postedInSubRedditP.onmouseout = () => {
+        postedInSubRedditP.style.color = 'rgb(204,204,204)';
+      }
+      return postedInSubRedditP;
+    }
+
+    let generateDomainOrigin = () => {
+      let linkDomainP = document.createElement('p');
+      linkDomainP.innerText = `${link.data.domain}`;
+      linkDomainP.style.textAlign = 'right';
+      linkDomainP.style.paddingRight = '1rem';
+      linkDomainP.onclick = () => {
+        window.open(`${link.data.url}`);
+      }
+      linkDomainP.onmouseover = () => {
+        linkDomainP.style.cursor = 'pointer';
+        linkDomainP.style.color = 'white';
+      }
+      linkDomainP.onmouseout = () => {
+        linkDomainP.style.color = 'rgb(204,204,204)';
+      }
+      return linkDomainP;
+    }
+
+    let generateLeftNav = function(counter) {
+      let leftNav = document.createElement('div');
+      leftNav.innerText = '<';
+      leftNav.id = 'ssPreviousButton'
+      leftNav.style.height = '100%';
+      leftNav.style.width = '100%';
+      leftNav.style.borderRight = '1px solid rgba(225,225,255, 0.3)';
+      leftNav.style.borderRadius = '5px';
+      leftNav.style.color = 'rgba(225,225,255, 0.8)';
+      if (counter != 0) {
+        leftNav.onmouseover = function() {
+          leftNav.style.cursor = 'pointer';
+          leftNav.style.background = 'rgba(200,200,255,0.3)';
+        }
+        leftNav.onmouseout = function() {
+          leftNav.style.background = 'none';
+        }
+      }
+
+      leftNav.style.gridRow = '1 / 4';
+      leftNav.style.gridColumn = '1';
+      leftNav.style.display = 'flex';
+      leftNav.style.alignContent = 'center';
+      leftNav.style.alignItems = 'center';
+      leftNav.style.justifyContentContent = 'center';
+
+      return leftNav;
+    }
+
+    let generateRightNav = function() {
+      let rightNav = document.createElement('div');
+      rightNav.innerText = '>';
+      rightNav.id = 'ssNextButton';
+      rightNav.style.height = '100%';
+      rightNav.style.width = '100%';
+      rightNav.style.borderLeft = '1px solid rgba(225,225,255, 0.3)';
+      rightNav.style.borderRadius = '5px';
+      rightNav.style.color = 'rgba(225,225,255, 0.8)';
+      rightNav.onmouseover = function() {
+        rightNav.style.cursor = 'pointer';
+        rightNav.style.background = 'rgba(200,200,255,0.3)';
+      }
+      rightNav.onmouseout = function() {
+        rightNav.style.background = 'none';
+      }
+
+      rightNav.style.gridRow = '1 / 4';
+      rightNav.style.gridColumn = '3';
+      rightNav.style.display = 'flex';
+      rightNav.style.alignContent = 'center';
+      rightNav.style.alignItems = 'center';
+      rightNav.style.justifyContentContent = 'center';
+
+      return rightNav;
+    }
+    let generateAlerts = function(link) {
+      let nsfwStatus = link.data.over_18;
+      let quarantineStatus = link.data.quarantine;
+      let alertDisplayFlex = document.createElement('div');
+      alertDisplayFlex.style.display = 'flex';
+      alertDisplayFlex.style.justifyContent = 'center';
+      alertDisplayFlex.style.alignItems = 'center';
+      alertDisplayFlex.style.width = '30%';
+      alertDisplayFlex.style.textAlign = 'center';
+
+      let alertNSFW = document.createElement('p');
+      alertNSFW.style.display = 'inline';
+      alertNSFW.innerText = 'NSFW';
+      alertNSFW.style.color = 'darkred';
+      alertNSFW.style.border = '1px solid darkred';
+      alertNSFW.style.borderRadius = '5px';
+      alertNSFW.style.padding = '0 .5rem 0 .5rem';
+
+      let alertQuarantine = document.createElement('p');
+      alertQuarantine.style.display = 'inline';
+      alertQuarantine.innerText = 'Quarantine';
+      alertQuarantine.style.color = 'black';
+      alertQuarantine.style.border = '1px solid yellow';
+      alertQuarantine.style.background = 'yellow';
+      alertQuarantine.style.borderRadius = '5px';
+      alertQuarantine.style.padding = '0 .5rem 0 .5rem';
+
+      if (nsfwStatus == true) {
+        alertDisplayFlex.appendChild(alertNSFW);
+      }
+      if (quarantineStatus == true) {
+        alertDisplayFlex.appendChild(alertQuarantine);
+      }
+      return alertDisplayFlex;
+    }
+
     let generateHeaderSecondRow = function(links, counter) {
-
-      let generatePostedIn = () => {
-        let postedInSubRedditP = document.createElement('p');
-        postedInSubRedditP.innerText = `${link.data.subreddit_name_prefixed}`;
-        postedInSubRedditP.style.textAlign = 'left';
-        postedInSubRedditP.style.paddingLeft = '1rem';
-        postedInSubRedditP.onclick = () => {
-          window.open(`./${link.data.subreddit_name_prefixed}`);
-        }
-        postedInSubRedditP.onmouseover = () => {
-          postedInSubRedditP.style.cursor = 'pointer';
-          postedInSubRedditP.style.color = 'white';
-        }
-        postedInSubRedditP.onmouseout = () => {
-          postedInSubRedditP.style.color = 'rgb(204,204,204)';
-        }
-        return postedInSubRedditP;
-      }
-
-      let generateDomainOrigin = () => {
-        let linkDomainP = document.createElement('p');
-        linkDomainP.innerText = `${link.data.domain}`;
-        linkDomainP.style.textAlign = 'right';
-        linkDomainP.style.paddingRight = '1rem';
-        linkDomainP.onclick = () => {
-          window.open(`${link.data.url}`);
-        }
-        linkDomainP.onmouseover = () => {
-          linkDomainP.style.cursor = 'pointer';
-          linkDomainP.style.color = 'white';
-        }
-        linkDomainP.onmouseout = () => {
-          linkDomainP.style.color = 'rgb(204,204,204)';
-        }
-        return linkDomainP;
-      }
-
-      let generateLeftNav = function(links,counter) {
-        let leftNav = document.createElement('div');
-        leftNav.innerText = '<';
-        leftNav.id = 'ssPreviousButton'
-        leftNav.style.height = '100%';
-        leftNav.style.width = '1.5rem';
-        leftNav.style.border = '1px solid rgba(225,225,255, 0.3)';
-        leftNav.style.borderRadius = '5px';
-        leftNav.style.color = 'rgba(225,225,255, 0.8)';
-        leftNav.style.padding = '0.75rem 0.25rem';
-        leftNav.style.marginTop = '-2rem';
-        if (counter != 0) {
-          leftNav.onmouseover = function() {
-            leftNav.style.cursor = 'pointer';
-          };
-        }
-        return leftNav;
-      }
-
-      let generateRightNav = function(links,counter) {
-        let rightNav = document.createElement('div');
-        rightNav.innerText = '>';
-        rightNav.id = 'ssNextButton';
-        rightNav.style.height = '100%';
-        rightNav.style.width = '1.5rem';
-        rightNav.style.border = '1px solid rgba(225,225,255, 0.3)';
-        rightNav.style.borderRadius = '5px';
-        rightNav.style.color = 'rgba(225,225,255, 0.8)';
-        rightNav.style.padding = '0.75rem 0.25rem';
-        rightNav.style.marginTop = '-2rem';
-        rightNav.onmouseover = function() {
-          rightNav.style.cursor = 'pointer';
-        }
-        return rightNav;
-      }
-
-      let generateAlerts = function(link) {
-        let nsfwStatus = link.data.over_18;
-        let quarantineStatus = link.data.quarantine;
-        let alertDisplayFlex = document.createElement('div');
-        alertDisplayFlex.style.display = 'flex';
-        alertDisplayFlex.style.justifyContent = 'center';
-        alertDisplayFlex.style.alignItems = 'center';
-        alertDisplayFlex.style.width = '30%';
-        alertDisplayFlex.style.textAlign = 'center';
-  
-        let alertNSFW = document.createElement('p');
-        alertNSFW.style.display = 'inline';
-        alertNSFW.innerText = 'NSFW';
-        alertNSFW.style.color = 'darkred';
-        alertNSFW.style.border = '1px solid darkred';
-        alertNSFW.style.borderRadius = '5px';
-        alertNSFW.style.padding = '0 .5rem 0 .5rem';
-  
-        let alertQuarantine = document.createElement('p');
-        alertQuarantine.style.display = 'inline';
-        alertQuarantine.innerText = 'Quarantine';
-        alertQuarantine.style.color = 'black';
-        alertQuarantine.style.border = '1px solid yellow';
-        alertQuarantine.style.background = 'yellow';
-        alertQuarantine.style.borderRadius = '5px';
-        alertQuarantine.style.padding = '0 .5rem 0 .5rem';
-  
-        if (nsfwStatus == true) {
-          alertDisplayFlex.appendChild(alertNSFW);
-        }
-        if (quarantineStatus == true) {
-          alertDisplayFlex.appendChild(alertQuarantine);
-        }
-  
-        return alertDisplayFlex;
-      }
-
       let secondRow = document.createElement('div');
       secondRow.style.width = '100%';
       secondRow.style.display = 'flex';
@@ -371,12 +393,13 @@ class SlideShowUI {
       secondRow.style.textAlign = 'center';
       secondRow.style.marginTop = '0.5rem';
       secondRow.id = 'secondHeadRow'
-
-      secondRow.appendChild(generateLeftNav(links,counter));
+      // secondRow.appendChild(generateLeftNav(counter));
+      // secondRow.appendChild(generateRightNav());
       secondRow.appendChild(generatePostedIn());
       secondRow.appendChild(generateAlerts(link));
       secondRow.appendChild(generateDomainOrigin());
-      secondRow.appendChild(generateRightNav(links,counter));
+      linkMainDiv.appendChild(generateLeftNav(counter));
+      linkMainDiv.appendChild(generateRightNav());
       return secondRow;
     }
 
@@ -386,12 +409,12 @@ class SlideShowUI {
       headContainer.flexFlow = 'column';
       headContainer.id = 'headContainer';
       headContainer.style.width = '100%';
-      headContainer.style.margin = '0 1rem 0.5rem 1rem';
       headContainer.style.flexWrap = 'wrap';
       headContainer.style.textAlign = 'center';
       headContainer.style.justifyContent = 'center';
       headContainer.style.flex = '0 1 auto';
-
+      headContainer.style.gridRow = '1';
+      headContainer.style.gridColumn = '2';
       headContainer.appendChild(generateLinkHead(link));
       headContainer.appendChild(generateHeaderSecondRow(links, counter))
       return headContainer;
@@ -403,14 +426,32 @@ class SlideShowUI {
   createContent(link) {
     let linkMainDiv = document.querySelector('#linkMainDiv');
 
+    let generateContentContainer = () => {
+      let contentContainer = document.createElement('div');
+      contentContainer.id = 'contentContainer';
+      contentContainer.style.gridRow = '2';
+      contentContainer.style.gridColumn = '2';
+      contentContainer.style.maxHeight = '69vh';
+      contentContainer.style.height = 'auto';
+      contentContainer.style.maxWidth = '100%';
+      contentContainer.style.width = 'auto';
+      contentContainer.style.textAlign = 'center';
+      contentContainer.style.margin = '0 auto';
+      contentContainer.style.display = 'flex';
+      contentContainer.style.flexFlow = 'column';
+      contentContainer.style.alignContent = 'center';
+      contentContainer.style.alignItems = 'center';
+      contentContainer.style.justifyContent = 'center';
+      return contentContainer;
+    }
+    
+    
     let styleImgContent = (content) => {
-      content.style.objectFit = 'contain';
-      content.style.height = 'auto';
-      content.style.width = 'auto';
+      content.style.maxHeight = '100%';
       content.style.maxWidth = '100%';
-      content.style.maxHeight = '80vh';
-      content.style.margin = 'auto';
       content.style.border = '1px solid black';
+      content.style.gridRow = '2';
+      content.style.gridColumn = '2';
       return content;
     }
 
@@ -421,6 +462,8 @@ class SlideShowUI {
       content.controls = true;
       content.loop = true;
       content.muted = false;
+      content.style.gridRow = '2';
+      content.style.gridColumn = '2';
       return content;
     }
 
@@ -438,6 +481,9 @@ class SlideShowUI {
       content.style.paddingTop = '1rem';
       content.style.color = 'rgb(204,204,204)';
       content.style.lineHeight = '1rem';
+      content.style.gridRow = '2';
+      content.style.gridColumn = '2';
+
       return content;
     }
 
@@ -459,9 +505,9 @@ class SlideShowUI {
           linkImg.onmouseover = function() {
             linkImg.style.cursor = 'pointer';
           }
-
-          linkImgContainer.appendChild(linkImg);
-          return linkImgContainer;
+          let container = generateContentContainer();
+          container.appendChild(linkImg);
+          return container;
         }
       }
       return null;
@@ -485,7 +531,11 @@ class SlideShowUI {
 
           linkVid.appendChild(vidSourceMp4);
           linkVid.appendChild(vidSourceWebm);
-          return linkVid;
+
+          let container = generateContentContainer();
+          container.appendChild(linkVid);
+          return container;
+
         }
       }
       return null;
@@ -502,7 +552,12 @@ class SlideShowUI {
           albumNotification.style.marginTop = '0';
           this.createThumbNailImg(link);
           albumNotification.innerText = 'This is an album. Click the thumbnail above to view';
-          return albumNotification;
+
+
+          let container = generateContentContainer();
+          container.appendChild(albumNotification);
+          return container;
+
         }
         else {
           let linkImg = document.createElement('IMG');
@@ -515,7 +570,11 @@ class SlideShowUI {
           linkImg.onmouseover = function() {
             linkImg.style.cursor = 'pointer';
           }
-          return linkImg;
+
+          let container = generateContentContainer();
+          container.appendChild(linkImg);
+          return container;
+
         }
       }
       return null;
@@ -560,7 +619,10 @@ class SlideShowUI {
         linkVid.appendChild(vidSourceMP4);
         linkVid.appendChild(vidSourceMP4Mobile);
 
-        return linkVid;
+        let container = generateContentContainer();
+        container.appendChild(linkVid);
+        return container;
+
       }
       return null;
     }
@@ -582,7 +644,11 @@ class SlideShowUI {
         linkVid.width = vidWidth;
         linkVid.allowFullscreen = true;
         linkVid.style.border = '1px solid black';
-        return linkVid;
+
+        let container = generateContentContainer();
+        container.appendChild(linkVid);
+        return container;
+
       }
       let youTubeWatchCodeReg = /(?:v=)\w+/;
       if (youTubeWatchCodeReg.test(link.data.url)) {
@@ -595,7 +661,11 @@ class SlideShowUI {
         linkVid.width = vidWidth;
         linkVid.allowFullscreen = true;
         linkVid.style.border = '1px solid black';
-        return linkVid;
+
+        let container = generateContentContainer();
+        container.appendChild(linkVid);
+        return container;
+
       }
       if (link.data.domain == 'v.redd.it') {
         if (link.data.secure_media != null) {
@@ -613,7 +683,11 @@ class SlideShowUI {
         linkVid.allowFullscreen = true;
         linkVid.style.border = '1px solid black';
         linkVid.align = 'middle';
-        return linkVid;
+
+        let container = generateContentContainer();
+        container.appendChild(linkVid);
+        return container;
+
       }
       if (link.data.domain == 'youtu.be') {
         let embedKey = link.data.url.match(/(?:\w\/)\w+-{0,1}\w+/).join().replace(/(?:\w\/)/,'');
@@ -625,7 +699,11 @@ class SlideShowUI {
         linkVid.width = vidWidth;
         linkVid.allowFullscreen = true;
         linkVid.style.border = '1px solid black';
-        return linkVid;
+
+        let container = generateContentContainer();
+        container.appendChild(linkVid);
+        return container;
+
       }
 
       return null;
@@ -636,12 +714,79 @@ class SlideShowUI {
         let selfPostParagraph = document.createElement('p');
         selfPostParagraph.innerText = link.data.selftext;
         styleTextContent(selfPostParagraph);
-        return selfPostParagraph;
-      } else if (/^self\./.test(link.data.domain)) {
+
+        let container = generateContentContainer();
+        container.appendChild(selfPostParagraph);
+        return container;
+      } 
+      else if (/^self\./.test(link.data.domain)) {
         let selfPostParagraph = document.createElement('p');
-        return selfPostParagraph;
+        let container = generateContentContainer();
+        container.appendChild(selfPostParagraph);
+        return container;
       }
       return null;
+    }
+
+    let generateThumbNailImg = (link) => {
+      let thumbnailOfLink = document.createElement('IMG');
+      thumbnailOfLink.src = link.data.thumbnail;
+      thumbnailOfLink.id = 'ssThumbnail';
+      thumbnailOfLink.style.height = `${link.data.thumbnail_height}px`;
+      thumbnailOfLink.style.width = `${link.data.thumbnail_width}px`;
+      thumbnailOfLink.style.maxWidth = '100%';
+      thumbnailOfLink.style.margin = 'auto';
+      thumbnailOfLink.style.border = '1px solid black';
+      thumbnailOfLink.style.marginBottom = '0.5rem';
+      thumbnailOfLink.style.borderRadius = '3px';
+
+      thumbnailOfLink.style.gridRow = '2';
+      thumbnailOfLink.style.gridColumn = '2';
+
+      thumbnailOfLink.onclick = function() {
+        window.open(link.data.url);
+      }
+      thumbnailOfLink.onmouseover = function() {
+        thumbnailOfLink.style.cursor = 'pointer';
+      }
+
+      return thumbnailOfLink;
+    }
+
+    let contentLoadErrorParagraph = (link) => {
+      let textLink = document.createElement('span');
+      textLink.style.color = '#AAF';
+      textLink.innerText = ` Click here to view`;
+      let sorryParagraph = document.createElement('p');
+      let sorryText = `Unable to load content.`;
+      sorryParagraph.innerText = sorryText;
+      sorryParagraph.style.padding = '2px';
+      sorryParagraph.style.color = 'rgb(204,204,204)';
+
+      textLink.onclick = function() {
+        window.open('.'+link.data.permalink);
+      }
+      textLink.onmouseover = function() {
+        textLink.style.cursor = 'pointer';
+        textLink.style.color = '#EFF';
+      }
+      textLink.onmouseout = function() {
+        textLink.style.color = '#AAF';
+      }
+
+      let container = generateContentContainer();
+      try {
+        let thumbnail = generateThumbNailImg(link);
+        container.appendChild(thumbnail);
+      } catch(error) {
+        throw error;
+      }
+
+      container.appendChild(sorryParagraph);
+      container.appendChild(textLink);
+      console.log(`Unable to load content for: \n`, this.mainLink.data,  `\nCounter: ${this.counter} of ${this.links.length} available links`);
+      return container;
+      
     }
     
     let attemptCreation = () => {
@@ -653,64 +798,11 @@ class SlideShowUI {
         }
       });
       if (possibleContent.filter(v=> v !== null).length === 0){
-        this.contentLoadErrorParagraph(link);
+        let contentLoadError = contentLoadErrorParagraph(link);
+        linkMainDiv.appendChild(contentLoadError);
       };
     }
-
     attemptCreation();
-  }
-
-
-  createThumbNailImg(link) {
-    let linkMainDiv = document.querySelector('#linkMainDiv');
-    let thumbnailOfLink = document.createElement('IMG');
-    thumbnailOfLink.src = link.data.thumbnail;
-    thumbnailOfLink.id = 'ssThumbnail';
-    thumbnailOfLink.style.height = `${link.data.thumbnail_height}px`;
-    thumbnailOfLink.style.width = `${link.data.thumbnail_width}px`;
-    thumbnailOfLink.style.maxWidth = '100%';
-    thumbnailOfLink.style.margin = 'auto';
-    thumbnailOfLink.style.border = '1px solid black';
-    thumbnailOfLink.style.marginBottom = '0.5rem';
-    thumbnailOfLink.style.borderRadius = '3px';
-    thumbnailOfLink.onclick = function() {
-      window.open(link.data.url);
-    }
-    thumbnailOfLink.onmouseover = function() {
-      thumbnailOfLink.style.cursor = 'pointer';
-    }
-    linkMainDiv.appendChild(thumbnailOfLink);
-
-  }
-
-  contentLoadErrorParagraph(link) {
-    let textLink = document.createElement('span');
-    textLink.style.color = '#AAF';
-    textLink.innerText = ` Click here to view`;
-    let sorryParagraph = document.createElement('p');
-    let sorryText = `Unable to load content.`;
-    sorryParagraph.innerText = sorryText;
-    sorryParagraph.style.padding = '2px';
-    sorryParagraph.style.color = 'rgb(204,204,204)';
-
-    textLink.onclick = function() {
-      window.open('.'+link.data.permalink);
-    }
-    textLink.onmouseover = function() {
-      textLink.style.cursor = 'pointer';
-      textLink.style.color = '#EFF';
-    }
-    textLink.onmouseout = function() {
-      textLink.style.color = '#AAF';
-    }
-    try {
-      this.createThumbNailImg(link);
-    } catch(error) {
-      throw error;
-    }
-    linkMainDiv.appendChild(sorryParagraph);
-    sorryParagraph.appendChild(textLink);
-    console.log(`Unable to load content for: \n`, this.mainLink.data,  `\nCounter: ${this.counter} of ${this.links.length} available links`);
   }
 
   createFooter(links, counter) {
@@ -719,14 +811,16 @@ class SlideShowUI {
     let generateFooterDiv = function() {
       let footerDiv = document.createElement('div');
       footerDiv.style.width = '100%';
+      footerDiv.style.height = '100%';
       footerDiv.style.display = 'flex';
       footerDiv.style.justifyContent = 'center';
       footerDiv.style.alignItems = 'center';
-      footerDiv.style.alignSelf = 'flex-end';
-      footerDiv.style.margin = '0rem 2rem';
       footerDiv.style.color = 'rgb(204,204,204)';
-      footerDiv.style.flex = '0 0 auto';
       footerDiv.id = 'ssFooterDiv';
+
+      footerDiv.style.gridRow = '3';
+      footerDiv.style.gridColumn = '1/4';
+      
       return footerDiv;
     }
     let generateCenterInfo = function(link) {
