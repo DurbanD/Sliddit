@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Sliddit
 // @namespace    http://www.github.com/DurbanD/Sliddit/
-// @version      0.6
+// @version      0.7
 // @description  Full-Screen Slideshow browsing for Reddit
 // @author       Durban
 // @match        https://www.reddit.com/*
@@ -60,7 +60,12 @@ class SlideShow {
     if ((this.counter+1)/this.links.length >= 0.5) {
       this.getMoreLinks(this.links).then(()=> this.currentLink = this.getCurrentLink());
     }
-    this.updateUI(this.links, this.counter);
+    if (this.testLinkAgainstFilters(this.links[this.counter]) == true) {
+      return this.updateUI(this.links, this.counter);
+    }
+    else {
+      return this.nextLink();
+    }
   }
 
   previousLink() {
@@ -70,7 +75,10 @@ class SlideShow {
       this.counter = 0;
       this.updateUI(this.links, this.counter);
     } else {
-      this.updateUI(this.links, this.counter);
+      if (this.testLinkAgainstFilters(this.links[this.counter]) == true) {
+        return this.updateUI(this.links, this.counter);
+      }
+      return this.previousLink();
     }
   }
 
@@ -115,14 +123,121 @@ class SlideShow {
     })
   }
 
+  getLinkType(link) {
+    let imageExtensions = [/\.jpg$/, /\.jpeg$/, /\.png$/, /\.bmp$/, /\.tiff$/, /\.gif$/];
+    let videoExtensions = [/\.webm$/, /\.gifv$/, /\.mp4$/, /\.flv$/, /\.mkv$/, /\.avi$/, /\.mpeg$/, /\.mov$/];
+    for (let i = 0; i<imageExtensions.length;i++) {
+      if (imageExtensions[i].test(link.data.url)) {
+        return 'image';
+      }
+    }
+    for (let i = 0; i<videoExtensions.length;i++) {
+      if (videoExtensions[i].test(link.data.url)) {
+        return 'video';
+      }
+    }
+    if (/^self\./.test(link.data.domain)) {
+      return 'self';
+    }
+
+    switch (link.data.domain) {
+      case "imgur.com":
+        if (/\/a\//.test(link.data.url)) {
+          return 'other';
+        } else {
+          return 'image';
+        }
+      case "gfycat.com":
+        return 'video';
+      case "v.redd.it":
+        return 'video';
+      case 'youtu.be':
+        return 'video';
+      case 'youtube.com':
+        return 'video';
+      case 'youtube':
+        return 'video';
+    }
+
+    if (/(?:viewkey=)\w+(?:&)/.test(link.data.url)) {
+      return 'video';
+    }
+    if (/(?:v=)\w+/.test(link.data.url)) {
+      return 'video';
+    }
+    return 'other';
+  }
+
+  testLinkAgainstFilters(link) {
+    let filterList = new SlideShowSettings().generateStartupSettings();
+    let nsfwStatus = link.data.over_18;
+    const getNSFWSetting = () => {
+      if (filterList['nsfw-filter-hide'] === true) {
+        return 'nsfw-filter-hide';
+      }
+      if (filterList['nsfw-filter-show'] === true) {
+        return 'nsfw-filter-show';
+      }
+      if (filterList['nsfw-filter-show-only'] === true) {
+        return 'nsfw-filter-show-only';
+      }
+    }
+    let nsfwSetting = getNSFWSetting();
+    let quarantineStatus = link.data.quarantine;
+    const getQuarantineSetting = () => {
+      if(filterList['quarantine-filter-show'] === true) {
+        return 'quarantine-filter-show';
+      }
+      if(filterList['quarantine-filter-hide'] === true) {
+        return 'quarantine-filter-hide';
+      }
+    }
+    let quarantineSetting = getQuarantineSetting();
+    let linkType = this.getLinkType(link);
+    if (linkType === 'image') {
+      if (filterList['image-filter-box'] === false) {
+        return false;
+      }
+    }
+    if (linkType === 'video') {
+      if (filterList['video-filter-box'] === false) {
+        return false;
+      }
+    }
+    if (linkType === 'self') {
+      if (filterList['self-post-filter-box'] === false) {
+        return false;
+      }
+    }
+    if (linkType === 'other') {
+      if (filterList['other-filter-box'] === false) {
+        return false;
+      }
+    }
+    if (quarantineStatus == true && quarantineSetting === 'quarantine-filter-hide') {
+      return false;
+    }
+    if (nsfwStatus == true && nsfwSetting === 'nsfw-filter-hide') {
+      return false;
+    }
+    if (nsfwStatus == false && nsfwSetting === 'nsfw-filter-show-only') {
+      return false;
+    }
+    return true;
+  }
+
   updateUI(links,counter) {
     this.lastLink = this.getLastAvailableLink();
     this.currentLink = this.getCurrentLink();
-    let updatedSlideUI = new SlideShowUI(links, counter);
-    updatedSlideUI.generateUI();
-    this.createNavigationListeners();
+    if (this.testLinkAgainstFilters(this.currentLink) === true) {
+      let updatedSlideUI = new SlideShowUI(links, counter);
+      updatedSlideUI.generateUI();
+      this.createNavigationListeners();
+    }
+    else {
+      this.nextLink();
+    }
   }
-
 
   exitSlideShow() {
     let previousLinkName;
@@ -137,18 +252,18 @@ class SlideShow {
     window.location = url;
     return url;
   }
-
 }
 
-//
-/////
-/////////
+//////////////////////
+//////////////////
 /////////////
-////////////////////
-////////////
-/////////
+//////////
 /////
-//
+//  UI //
+//////////////
+////////////////
+///////////
+/////
 
 class SlideShowUI {
   constructor(links, counter) {
@@ -162,40 +277,47 @@ class SlideShowUI {
   createBackground() {
     document.body.style.lineHeight = '1rem';
     let fullScreenBackground = document.createElement('div');
-    fullScreenBackground.style.position = 'absolute';
-    fullScreenBackground.style.left = '0';
-    fullScreenBackground.style.top = '0';
-    fullScreenBackground.style.boxSizing = 'border-box';
-    fullScreenBackground.style.zIndex = '99';
-    fullScreenBackground.style.background = '#111';
-    fullScreenBackground.style.width = '100vw';
-    fullScreenBackground.style.height = '100vh';
-    fullScreenBackground.style.overflow = 'hidden';
-    fullScreenBackground.style.padding = '1rem';
-    fullScreenBackground.style.display = 'flex';
-    fullScreenBackground.style.justifyContent = 'center';
-    fullScreenBackground.style.alignContent = 'center';
-    fullScreenBackground.style.alignItems = 'center';
     fullScreenBackground.id = 'slideShowBG';
-    document.body.appendChild(fullScreenBackground);
-  };
+    const styleFSBackground = (content) => {
+      content.style.position = 'absolute';
+      content.style.left = '0';
+      content.style.top = '0';
+      content.style.boxSizing = 'border-box';
+      content.style.zIndex = '99';
+      content.style.background = '#111';
+      content.style.width = '100vw';
+      content.style.height = '100vh';
+      content.style.overflow = 'hidden';
+      content.style.padding = '1rem';
+      content.style.display = 'flex';
+      content.style.justifyContent = 'center';
+      content.style.alignContent = 'center';
+      content.style.alignItems = 'center';
+      return content;
+    };
+    styleFSBackground(fullScreenBackground);
+    return document.body.appendChild(fullScreenBackground);
+  }
 
   createExitButton() {
     let exitButtonDiv = document.createElement('div');
     let slideBG = document.querySelector('#slideShowBG');
     exitButtonDiv.id = 'ssExit';
-    exitButtonDiv.style.position = 'absolute';
-    exitButtonDiv.style.top = '5px';
-    exitButtonDiv.style.right = '5px';
-    exitButtonDiv.style.height = '1.5rem';
-    exitButtonDiv.style.width = '1.5rem';
-    exitButtonDiv.style.border = '1px solid rgba(150,150,175,0.3)';
-    exitButtonDiv.innerText = 'X';
-    exitButtonDiv.style.color = 'rgba(150,150,175,0.9)';
-    exitButtonDiv.style.alignItems = 'center';
-    exitButtonDiv.style.textAlign = 'center';
-    exitButtonDiv.style.paddingTop = '6px';
-
+    const styleExitButton = (content) => {
+      content.style.position = 'absolute';
+      content.style.top = '5px';
+      content.style.right = '5px';
+      content.style.height = '1.5rem';
+      content.style.width = '1.5rem';
+      content.style.border = '1px solid rgba(150,150,175,0.3)';
+      content.innerText = 'X';
+      content.style.color = 'rgba(150,150,175,0.9)';
+      content.style.alignItems = 'center';
+      content.style.textAlign = 'center';
+      content.style.paddingTop = '6px';
+      return content;
+    }
+    styleExitButton(exitButtonDiv);
     exitButtonDiv.onmouseover = function() {
       exitButtonDiv.style.cursor = 'pointer';
     }
@@ -205,19 +327,19 @@ class SlideShowUI {
 
   createContentContainer() {
     let linkMainDiv = document.createElement('div');
+    linkMainDiv.id = "linkMainDiv";
     let slideBG = document.querySelector('#slideShowBG');
     const styleContainer = (content) => {
-      content.id = "linkMainDiv";
       content.style.background = 'rgba(225,225,255,0.05)';
       content.style.width = '95vw';
       content.style.minHeight = '100px';
-      content.style.maxHeight = '90vh';
+      content.style.maxHeight = '95vh';
       content.style.maxWidth = '1600px';
       content.style.zIndex = '100';
       content.style.boxSizing = 'border-box';
       content.style.textAlign = 'center';
       content.style.border = '1px dotted black';
-      content.style.boxShadow = '2px 2px 10px 5px #777, -2px -2px 10px 5px #777';
+      content.style.boxShadow = '2px 2px 6px 4px rgba(175,175,175,0.4), -2px -2px 6px 4px rgba(175,175,175,0.4)';
       content.style.borderRadius = '5px';
       content.style.overflow = 'hidden';
       content.style.display = 'grid';
@@ -226,7 +348,6 @@ class SlideShowUI {
       content.style.gridTemplateColumns = '1rem minmax(auto,100%) 1rem';
       content.style.gridGap = '0.5rem';
       content.style.padding = '0.5rem 0';
-
       return content;
     }
     styleContainer(linkMainDiv);
@@ -239,21 +360,27 @@ class SlideShowUI {
     let generateLinkHead = function(link) {
       let linkHead = document.createElement('h3');
       linkHead.innerText = link.data.title;
-      linkHead.style.width = '90%';
-      linkHead.style.fontSize = '0.9rem';
-      linkHead.style.lineHeight = '1rem';
-      linkHead.style.textAlign = 'center';
       linkHead.id = 'linkHead';
-      linkHead.style.color = '#CCF';
-      linkHead.style.overflow = 'hidden';
-
-      linkHead.onclick = function() {
-        window.open(link.data.permalink);
+      const styleLinkHead = (content) => {
+        content.style.width = '90%';
+        content.style.fontSize = '0.9rem';
+        content.style.lineHeight = '1rem';
+        content.style.textAlign = 'center';
+        content.style.color = '#CCF';
+        content.style.overflow = 'hidden';
+        return content;
       }
-      linkHead.onmouseover = function() {
-        linkHead.style.cursor = 'pointer';
+      styleLinkHead(linkHead);
+      const addListeners = (content) => {
+        content.onclick = function() {
+          window.open(link.data.permalink);
+        }
+        content.onmouseover = function() {
+          content.style.cursor = 'pointer';
+        }
+        return content;
       }
-
+      addListeners(linkHead);
       return linkHead;
     }
 
@@ -262,16 +389,21 @@ class SlideShowUI {
       postedInSubRedditP.innerText = `${link.data.subreddit_name_prefixed}`;
       postedInSubRedditP.style.textAlign = 'left';
       postedInSubRedditP.style.paddingLeft = '1rem';
-      postedInSubRedditP.onclick = () => {
-        window.open(`./${link.data.subreddit_name_prefixed}`);
+
+      const addListeners = (content) => {
+        content.onclick = () => {
+          window.open(`./${link.data.subreddit_name_prefixed}`);
+        }
+        content.onmouseover = () => {
+          content.style.cursor = 'pointer';
+          content.style.color = 'white';
+        }
+        content.onmouseout = () => {
+          content.style.color = 'rgb(204,204,204)';
+        }
+        return content;
       }
-      postedInSubRedditP.onmouseover = () => {
-        postedInSubRedditP.style.cursor = 'pointer';
-        postedInSubRedditP.style.color = 'white';
-      }
-      postedInSubRedditP.onmouseout = () => {
-        postedInSubRedditP.style.color = 'rgb(204,204,204)';
-      }
+      addListeners(postedInSubRedditP);
       return postedInSubRedditP;
     }
 
@@ -280,16 +412,20 @@ class SlideShowUI {
       linkDomainP.innerText = `${link.data.domain}`;
       linkDomainP.style.textAlign = 'right';
       linkDomainP.style.paddingRight = '1rem';
-      linkDomainP.onclick = () => {
-        window.open(`${link.data.url}`);
+      const addListeners = (content) => {
+        content.onclick = () => {
+          window.open(`${link.data.url}`);
+        }
+        content.onmouseover = () => {
+          content.style.cursor = 'pointer';
+          content.style.color = 'white';
+        }
+        content.onmouseout = () => {
+          content.style.color = 'rgb(204,204,204)';
+        }
+        return content;
       }
-      linkDomainP.onmouseover = () => {
-        linkDomainP.style.cursor = 'pointer';
-        linkDomainP.style.color = 'white';
-      }
-      linkDomainP.onmouseout = () => {
-        linkDomainP.style.color = 'rgb(204,204,204)';
-      }
+      addListeners(linkDomainP);
       return linkDomainP;
     }
 
@@ -297,28 +433,33 @@ class SlideShowUI {
       let leftNav = document.createElement('div');
       leftNav.innerText = '<';
       leftNav.id = 'ssPreviousButton'
-      leftNav.style.height = '100%';
-      leftNav.style.width = '100%';
-      leftNav.style.borderRight = '1px solid rgba(225,225,255, 0.3)';
-      leftNav.style.borderRadius = '5px';
-      leftNav.style.color = 'rgba(225,225,255, 0.8)';
-      if (counter != 0) {
-        leftNav.onmouseover = function() {
-          leftNav.style.cursor = 'pointer';
-          leftNav.style.background = 'rgba(200,200,255,0.3)';
-        }
-        leftNav.onmouseout = function() {
-          leftNav.style.background = 'none';
+      const styleNav = (content) => {
+        content.style.height = '100%';
+        content.style.width = '100%';
+        content.style.borderRight = '1px solid rgba(225,225,255, 0.3)';
+        content.style.borderRadius = '5px';
+        content.style.color = 'rgba(225,225,255, 0.8)';
+        content.style.gridRow = '1 / 4';
+        content.style.gridColumn = '1';
+        content.style.display = 'flex';
+        content.style.alignContent = 'center';
+        content.style.alignItems = 'center';
+        content.style.justifyContent = 'center';
+        return content;
+      }
+      styleNav(leftNav);
+      const addListeners = (content) => {
+        if (counter != 0) {
+          leftNav.onmouseover = function() {
+            leftNav.style.cursor = 'pointer';
+            leftNav.style.background = 'rgba(200,200,255,0.3)';
+          }
+          leftNav.onmouseout = function() {
+            leftNav.style.background = 'none';
+          }
         }
       }
-
-      leftNav.style.gridRow = '1 / 4';
-      leftNav.style.gridColumn = '1';
-      leftNav.style.display = 'flex';
-      leftNav.style.alignContent = 'center';
-      leftNav.style.alignItems = 'center';
-      leftNav.style.justifyContentContent = 'center';
-
+      addListeners(leftNav);
       return leftNav;
     }
 
@@ -326,54 +467,72 @@ class SlideShowUI {
       let rightNav = document.createElement('div');
       rightNav.innerText = '>';
       rightNav.id = 'ssNextButton';
-      rightNav.style.height = '100%';
-      rightNav.style.width = '100%';
-      rightNav.style.borderLeft = '1px solid rgba(225,225,255, 0.3)';
-      rightNav.style.borderRadius = '5px';
-      rightNav.style.color = 'rgba(225,225,255, 0.8)';
-      rightNav.onmouseover = function() {
-        rightNav.style.cursor = 'pointer';
-        rightNav.style.background = 'rgba(200,200,255,0.3)';
+      const styleNav = (content) => {
+        content.style.height = '100%';
+        content.style.width = '100%';
+        content.style.borderLeft = '1px solid rgba(225,225,255, 0.3)';
+        content.style.borderRadius = '5px';
+        content.style.color = 'rgba(225,225,255, 0.8)';
+        content.style.gridRow = '1 / 4';
+        content.style.gridColumn = '3';
+        content.style.display = 'flex';
+        content.style.alignContent = 'center';
+        content.style.alignItems = 'center';
+        content.style.justifyContent = 'center';
+        return content;
       }
-      rightNav.onmouseout = function() {
-        rightNav.style.background = 'none';
+      styleNav(rightNav);
+      const setListeners = (content) => {
+        content.onmouseover = function() {
+          content.style.cursor = 'pointer';
+          content.style.background = 'rgba(200,200,255,0.3)';
+        }
+        content.onmouseout = function() {
+          content.style.background = 'none';
+        }
+        return content;
       }
-
-      rightNav.style.gridRow = '1 / 4';
-      rightNav.style.gridColumn = '3';
-      rightNav.style.display = 'flex';
-      rightNav.style.alignContent = 'center';
-      rightNav.style.alignItems = 'center';
-      rightNav.style.justifyContentContent = 'center';
-
+      setListeners(rightNav);
       return rightNav;
     }
+
     let generateAlerts = function(link) {
       let nsfwStatus = link.data.over_18;
       let quarantineStatus = link.data.quarantine;
       let alertDisplayFlex = document.createElement('div');
-      alertDisplayFlex.style.display = 'flex';
-      alertDisplayFlex.style.justifyContent = 'center';
-      alertDisplayFlex.style.alignItems = 'center';
-      alertDisplayFlex.style.width = '30%';
-      alertDisplayFlex.style.textAlign = 'center';
+      const styleAlertDisplay = (content) => {
+        content.style.display = 'flex';
+        content.style.justifyContent = 'center';
+        content.style.alignItems = 'center';
+        content.style.width = '30%';
+        content.style.textAlign = 'center';
+      }
+      styleAlertDisplay(alertDisplayFlex);
 
       let alertNSFW = document.createElement('p');
-      alertNSFW.style.display = 'inline';
-      alertNSFW.innerText = 'NSFW';
-      alertNSFW.style.color = 'darkred';
-      alertNSFW.style.border = '1px solid darkred';
-      alertNSFW.style.borderRadius = '5px';
-      alertNSFW.style.padding = '0 .5rem 0 .5rem';
+      const styleAlertNSFW = (content) => {
+        content.style.display = 'inline';
+        content.innerText = 'NSFW';
+        content.style.color = 'darkred';
+        content.style.border = '1px solid darkred';
+        content.style.borderRadius = '5px';
+        content.style.padding = '0 .5rem 0 .5rem';
+        return content;
+      }
+      styleAlertNSFW(alertNSFW);
 
       let alertQuarantine = document.createElement('p');
-      alertQuarantine.style.display = 'inline';
-      alertQuarantine.innerText = 'Quarantine';
-      alertQuarantine.style.color = 'black';
-      alertQuarantine.style.border = '1px solid yellow';
-      alertQuarantine.style.background = 'yellow';
-      alertQuarantine.style.borderRadius = '5px';
-      alertQuarantine.style.padding = '0 .5rem 0 .5rem';
+      const styleAlertQuarantine = (content) => {
+        content.style.display = 'inline';
+        content.innerText = 'Quarantine';
+        content.style.color = 'black';
+        content.style.border = '1px solid yellow';
+        content.style.background = 'yellow';
+        content.style.borderRadius = '5px';
+        content.style.padding = '0 .5rem 0 .5rem';
+        return content;
+      }
+      styleAlertQuarantine(alertQuarantine);
 
       if (nsfwStatus == true) {
         alertDisplayFlex.appendChild(alertNSFW);
@@ -386,15 +545,16 @@ class SlideShowUI {
 
     let generateHeaderSecondRow = function(links, counter) {
       let secondRow = document.createElement('div');
-      secondRow.style.width = '100%';
-      secondRow.style.display = 'flex';
-      secondRow.style.justifyContent = 'space-between';
-      secondRow.style.alignItems = 'center';
-      secondRow.style.textAlign = 'center';
-      secondRow.style.marginTop = '0.5rem';
-      secondRow.id = 'secondHeadRow'
-      // secondRow.appendChild(generateLeftNav(counter));
-      // secondRow.appendChild(generateRightNav());
+      secondRow.id = 'secondHeadRow';
+      const styleSecondRow = (content) => {
+        secondRow.style.width = '100%';
+        secondRow.style.display = 'flex';
+        secondRow.style.justifyContent = 'space-between';
+        secondRow.style.alignItems = 'center';
+        secondRow.style.textAlign = 'center';
+        secondRow.style.marginTop = '0.5rem';
+      }
+      styleSecondRow(secondRow);
       secondRow.appendChild(generatePostedIn());
       secondRow.appendChild(generateAlerts(link));
       secondRow.appendChild(generateDomainOrigin());
@@ -405,21 +565,24 @@ class SlideShowUI {
 
     let generateHeadContainer = function(link) {
       let headContainer = document.createElement('div');
-      headContainer.style.display = 'flex';
-      headContainer.flexFlow = 'column';
       headContainer.id = 'headContainer';
-      headContainer.style.width = '100%';
-      headContainer.style.flexWrap = 'wrap';
-      headContainer.style.textAlign = 'center';
-      headContainer.style.justifyContent = 'center';
-      headContainer.style.flex = '0 1 auto';
-      headContainer.style.gridRow = '1';
-      headContainer.style.gridColumn = '2';
+      const styleHeadContainer = (content) => {
+        content.style.display = 'flex';
+        content.flexFlow = 'column';
+        content.style.width = '100%';
+        content.style.flexWrap = 'wrap';
+        content.style.textAlign = 'center';
+        content.style.justifyContent = 'center';
+        content.style.flex = '0 1 auto';
+        content.style.gridRow = '1';
+        content.style.gridColumn = '2';
+        return content;
+      }
+      styleHeadContainer(headContainer);
       headContainer.appendChild(generateLinkHead(link));
       headContainer.appendChild(generateHeaderSecondRow(links, counter))
       return headContainer;
     }
-    
     linkMainDiv.appendChild(generateHeadContainer(link));
   }
 
@@ -429,22 +592,25 @@ class SlideShowUI {
     let generateContentContainer = () => {
       let contentContainer = document.createElement('div');
       contentContainer.id = 'contentContainer';
-      contentContainer.style.gridRow = '2';
-      contentContainer.style.gridColumn = '2';
-      contentContainer.style.maxHeight = '69vh';
-      contentContainer.style.height = 'auto';
-      contentContainer.style.maxWidth = '100%';
-      contentContainer.style.width = 'auto';
-      contentContainer.style.textAlign = 'center';
-      contentContainer.style.margin = '0 auto';
-      contentContainer.style.display = 'flex';
-      contentContainer.style.flexFlow = 'column';
-      contentContainer.style.alignContent = 'center';
-      contentContainer.style.alignItems = 'center';
-      contentContainer.style.justifyContent = 'center';
+      const styleContentContainer = (content) => {
+        content.style.gridRow = '2';
+        content.style.gridColumn = '2';
+        content.style.maxHeight = '80vh';
+        content.style.height = 'auto';
+        content.style.maxWidth = '100%';
+        content.style.width = 'auto';
+        content.style.textAlign = 'center';
+        content.style.margin = '0 auto';
+        content.style.display = 'flex';
+        content.style.flexFlow = 'column';
+        content.style.alignContent = 'center';
+        content.style.alignItems = 'center';
+        content.style.justifyContent = 'center';
+        return content;
+      }
+      styleContentContainer(contentContainer);
       return contentContainer;
     }
-    
     
     let styleImgContent = (content) => {
       content.style.maxHeight = '100%';
@@ -919,6 +1085,7 @@ class SlideShowUI {
       this.hideAllBodyNodes();
       this.createBackground();
       this.createExitButton();
+      new SlideShowSettings().createWheel(0, 0, document.querySelector('#slideShowBG'));
     }
     if (!document.querySelector('#linkMainDiv')) {
       this.createContentContainer();
@@ -960,19 +1127,261 @@ const createLaunch = function() {
   }
   else {
     let launchButton = document.createElement('div');
-    launchButton.style.width = '3rem';
-    launchButton.style.height = '1.5rem';
     launchButton.id = 'ssLaunch';
-    launchButton.style.position = 'fixed';
-    launchButton.style.top = '3rem';
-    launchButton.style.right = '10px';
-    launchButton.style.zIndex = '99';
-    launchButton.style.border = '1px solid rgba(225,225,255,0.2)';
-    launchButton.style.borderTop = 'none';
-    launchButton.style.borderRadius = '5px';
+    const styleLaunchButton = (content) => {
+      content.style.width = '3rem';
+      content.style.height = '1.5rem';
+      content.style.position = 'fixed';
+      content.style.top = '3rem';
+      content.style.right = '10px';
+      content.style.zIndex = '99';
+      content.style.border = '1px solid rgba(225,225,255,0.2)';
+      content.style.borderTop = 'none';
+      content.style.borderRadius = '5px';
+      return content;
+    }
+    styleLaunchButton(launchButton);
     styleTab(launchButton);
     return document.body.appendChild(launchButton);
   }
+}
+
+
+//////////////////
+/////////////
+//////////
+/////
+//  SETTINGS //
+//////////////
+
+class SlideShowSettings {
+  constructor() {
+      this.savedSettings = this.generateStartupSettings();
+  }
+
+  createWheel(xPos,yPos,container) {
+      let wheel = document.createElement('div');
+      wheel.innerText = '⚙';
+      const styleSettingsWheel = (content) => {
+          let wheel = content;
+          wheel.style.fontSize = '15pt';
+          wheel.style.color = '#eee';
+          wheel.style.border = '1px solid rgba(0,0,0,0.25)';
+          wheel.style.padding = '3px';
+          wheel.style.paddingTop = '0';
+          wheel.style.margin = '0';
+          wheel.style.display = 'flex';
+          wheel.style.justifyContent = 'center';
+          wheel.style.alignItems = 'center';
+          wheel.style.borderRadius = '15px';
+          wheel.style.height = '20px';
+          wheel.style.width = '20px';
+          wheel.style.position = 'absolute';
+          wheel.style.left = `${xPos}px`;
+          wheel.style.top = `${yPos}px`;
+          wheel.id = 'settingsWheel';
+          return wheel;
+      }
+      styleSettingsWheel(wheel);
+  
+      let addListeners = (content) => {
+          content.onmouseover = () => {
+              content.style.cursor = 'pointer';
+              content.style.background = 'rgba(240,240,240,0.1)';
+          }
+          content.onmouseout = () => {
+              content.style.background = 'rgba(240,240,240,0)';
+          }
+  
+          content.onclick = () => {
+              return new SlideShowSettings().createSettingsPanel();
+          }
+  
+      }
+      addListeners(wheel);
+      container.appendChild(wheel);
+  }
+  
+  createSettingsPanel() {
+      const generateSettings = () => {
+          let settingsBG = document.createElement('div');
+          settingsBG.id = 'sliddit-settings-bg';
+          const styleSettingsBG = (content) => {
+              content.style.width = '100vw';
+              content.style.height = '100vh';
+              content.style.background = 'rgba(0,0,0,0.5)';
+              content.style.position = 'absolute';
+              content.style.top = '0';
+              content.style.left = '0';
+              content.style.display = 'flex';
+              content.style.justifyContent = 'center';
+              content.style.alignContent = 'center';
+              content.style.alignItems = 'center';
+              content.style.zIndex = '199';
+              return content;
+          }
+          styleSettingsBG(settingsBG);
+          let generateSettingsForm = () => {
+              let settingsFormContainer = document.createElement('div');
+              settingsFormContainer.id = 'settingsFormContainer';
+              settingsFormContainer.style.maxWidth = '600px';
+              settingsFormContainer.style.padding = '1rem';
+              settingsFormContainer.innerHTML = `
+              <form id='filter-form-main' style="padding:1rem;background:rgba(55,60,60,0.89);border:1px solid white;border-radius:10px;">
+                  <div id="type-filter-container" style="padding:10px; margin:1rem; border:1px solid #aaa; background:rgba(255,255,255,0.1); text-align:center; display:flex; flex-flow:column; justify-content:center; align-items:center;>
+                      <h4 id="filter-type-head">Select Links to Show: </h4>
+                      <div class="filter-options" style="display:grid; grid-template-columns:repeat(4,1fr);">
+                          <div class="filter-option-container" style="display:flex;flex-flow:column;align-items:center; justify-content:center;padding:1rem;">
+                              <input type="checkbox" id="image-filter-box">
+                              <label for="image-filter-box">Images</label>
+                          </div>
+                          <div class="filter-option-container" style="display:flex;flex-flow:column;align-items:center; justify-content:center;padding:1rem;">
+                              <input type="checkbox" id="video-filter-box">
+                              <label for="video-filter-box">Video</label>
+                          </div>
+                          <div class="filter-option-container" style="display:flex;flex-flow:column;align-items:center; justify-content:center;padding:1rem;">
+                              <input type="checkbox" id="self-post-filter-box">
+                              <label for="self-post-filter-box">Self & Text</label>
+                          </div>
+                          <div class="filter-option-container" style="display:flex;flex-flow:column;align-items:center; justify-content:center;padding:1rem;">
+                              <input type="checkbox" id="other-filter-box">
+                              <label for="other-filter-box">Other</label>
+                          </div>
+                      </div>
+                  </div>
+
+                  <div id="nsfw-filter-container" style="padding:10px; margin:1rem; border:1px solid #aaa; background:rgba(255,255,255,0.1); text-align:center; display:flex; flex-flow:column; justify-content:center; align-items:center;>
+                      <h4 id="filter-nsfw-head">NSFW Filter Type: </h4>
+                      <div class="filter-options" style="display:grid; grid-template-columns:repeat(3,1fr);">
+
+                          <div class="filter-option-container" style="display:flex;flex-flow:column;align-items:center; justify-content:center;padding:1rem;">
+                              <input type="radio" name="nsfw-filter-option" id="nsfw-filter-hide">
+                              <label for="nsfw-filter-hide" style="margin-top:5px">Hide NSFW</label>
+                          </div>
+
+                          <div class="filter-option-container" style="display:flex;flex-flow:column;align-items:center; justify-content:center;padding:1rem;">
+                              <input type="radio" name="nsfw-filter-option" id="nsfw-filter-show">
+                              <label for="nsfw-filter-show" style="margin-top:5px">Show <span style="color:darkred">NSFW</span></label>
+                          </div>
+
+                          <div class="filter-option-container" style="display:flex;flex-flow:column;align-items:center; justify-content:center;padding:1rem;">
+                              <input type="radio" name="nsfw-filter-option" id="nsfw-filter-show-only">
+                              <label for="nsfw-filter-show-only" style="margin-top:5px"><span style="color:darkred">Only NSFW</span></label>
+                          </div>
+
+
+                      </div>
+                  </div>
+
+                  <div id="quarantine-filter-container" style="padding:10px; margin:1rem; border:1px solid #aaa; background:rgba(255,255,255,0.1); text-align:center; display:flex; flex-flow:column; justify-content:center; align-items:center;>
+                      <h4 id="filter-quarantine-head">Quarantine Filter: </h4>
+                      <div class="filter-options" style="display:grid; grid-template-columns:repeat(2,1fr);">
+
+                          <div class="filter-option-container" style="display:flex;flex-flow:column;align-items:center; justify-content:center;padding:1rem;">
+                              <input type="radio" name="quarantine-filter-option" id="quarantine-filter-show">
+                              <label for="quarantine-filter-show" style="margin-top:5px">Show</label>
+                          </div>
+
+                          <div class="filter-option-container" style="display:flex;flex-flow:column;align-items:center; justify-content:center;padding:1rem;">
+                              <input type="radio" name="quarantine-filter-option" id="quarantine-filter-hide">
+                              <label for="quarantine-filter-hide" style="margin-top:5px">Hide</label>
+                          </div>
+                      </div>
+                  </div>
+
+
+                  <div id="filter-form-ok-container" style="display:flex;width:100%;justify-content:center;align-items:center;">
+                      <button id="filter-form-ok-button" style="padding:0.25rem 1.5rem; border-radius:5px; background:rgba(230,230,230,0.75); color:black;border:1px solid rgba(0,0,0,0.8);" onmouseover="this.style.background='rgba(0,0,0,0.15)'; this.style.color='#ddd';" onmouseout="this.style.background='rgba(230,230,230,0.75)'; this.style.color='#111';">OK</button>
+                  </div>
+              </form>
+              `;          
+              return settingsFormContainer;
+          }
+          settingsBG.appendChild(generateSettingsForm());
+          return settingsBG;
+      }
+      document.body.appendChild(generateSettings());
+      
+      const addListeners = () => {
+          let okBtn = document.getElementById('filter-form-ok-button');
+          let settingsContainer = document.getElementById('sliddit-settings-bg');
+          let closeSettingsPanel = () => {
+              document.body.removeChild(settingsContainer);
+          }
+
+          let storeSettingsValuesInLocalStorage = () => {
+              let filterForm = document.getElementById('filter-form-main');
+              let possibleInputs = filterForm.querySelectorAll('input');
+              let contentSettings = {};
+              for (let i of Array.from(possibleInputs)) {
+                  contentSettings[`${i.id}`] = i.checked;
+              }
+
+              const contentSettingsJSONToString = (content) => {
+                  let contentString = JSON.stringify(content);
+                  return contentString;
+              }
+
+              let contentSettingsString = contentSettingsJSONToString(contentSettings);
+              localStorage.setItem('sliddit-filter-settings', contentSettingsString);
+          }
+
+          let settingsOK = () => {
+              storeSettingsValuesInLocalStorage();
+              closeSettingsPanel();
+          }
+          okBtn.addEventListener('click',settingsOK);
+      }
+      addListeners();
+  
+      const checkTheBoxes = () => {
+          let optionDict = this.savedSettings;
+          let filterForm = document.getElementById('filter-form-main');
+          let possibleBoxes = filterForm.querySelectorAll('input');
+          for (let box of possibleBoxes) {
+              let checkedValue = this.stringToBool(optionDict[`${box.id}`]);
+              box.checked = checkedValue;
+          }
+      }
+      checkTheBoxes();
+  }
+
+  getSavedSlideShowSettings = () => {
+      return this.savedSettings;
+  }
+
+  getLocalFilterSettings = () => {
+      return localStorage.getItem('sliddit-filter-settings');
+  }  
+  
+  generateDefaultJSONSettings = () => {
+      let defaultSettings = `{"image-filter-box":"true","video-filter-box":"true",
+      "self-post-filter-box":"true","other-filter-box":"false","nsfw-filter-hide":"false",
+      "nsfw-filter-show":"true","nsfw-filter-show-only":"false","quarantine-filter-show":"true",
+      "quarantine-filter-hide":"false"}`;
+      return defaultSettings;
+  }
+  
+  generateStartupSettings = () => {
+      if (localStorage.getItem('sliddit-filter-settings') !== null) {
+          return JSON.parse(this.getLocalFilterSettings());
+      } else {
+          return JSON.parse(this.generateDefaultJSONSettings());
+      }
+  }
+
+  stringToBool = (string) => {
+    if (typeof string == 'string'){ 
+      if (string.toLowerCase() === "true") {
+          return true;
+      } else if (string.toLowerCase() === "false") {
+          return false;
+      }
+      console.log(`Unable to Convert "${string}" to boolean value`)
+      return null
+    }
+    return string;
+  }      
 }
 
 window.addEventListener('load', createLaunch());
