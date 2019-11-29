@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Sliddit
 // @namespace    http://www.github.com/DurbanD/Sliddit/
-// @version      0.7
+// @version      0.7.1
 // @description  Full-Screen Slideshow browsing for Reddit
 // @author       Durban
 // @match        https://www.reddit.com/*
@@ -18,7 +18,7 @@ class SlideShow {
     this.fetchJsonDefaultString = './.json?limit=100';
     this.lastLink = {};
     if (parseInt(counter) >= parseInt(Object.keys(links).length)-50) {
-      this.getMoreLinks(this.links).then(()=>this.updateUI(this.links, this.counter)).then(()=>this.createKeyDownListeners()).then(()=>this.getManyMoreLinks(2));
+      this.getMoreLinks(this.links).then(()=>this.updateUI(this.links, this.counter)).then(()=>this.createKeyDownListeners());
     }
     else {
       this.createKeyDownListeners();
@@ -36,7 +36,8 @@ class SlideShow {
     let extraLinks = fetch(this.fetchJsonDefaultString + `&after=${this.lastLink.data.name}`).then((response) => response.json()).then((result) => extraLinks = result.data.children);
     await extraLinks;
     this.lastLink = this.getLastAvailableLink();
-    this.links = linksPrimary.concat(extraLinks);
+    let linkList = linksPrimary.concat(extraLinks);
+    this.links = linkList;
     return this.links;
   }
 
