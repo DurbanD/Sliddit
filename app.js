@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Sliddit
 // @namespace    http://www.github.com/DurbanD/Sliddit/
-// @version      0.7.1
+// @version      0.7.2
 // @description  Full-Screen Slideshow browsing for Reddit
 // @author       Durban
 // @match        https://www.reddit.com/*
@@ -335,18 +335,19 @@ class SlideShowUI {
       content.style.width = '95vw';
       content.style.minHeight = '100px';
       content.style.maxHeight = '95vh';
-      content.style.maxWidth = '1600px';
+      // content.style.maxWidth = '1600px';
+      content.style.width = '100vw';
       content.style.zIndex = '100';
       content.style.boxSizing = 'border-box';
       content.style.textAlign = 'center';
       content.style.border = '1px dotted black';
-      content.style.boxShadow = '2px 2px 6px 4px rgba(175,175,175,0.4), -2px -2px 6px 4px rgba(175,175,175,0.4)';
+      content.style.boxShadow = '2px 2px 6px 4px rgba(255,255,255,0.12), -2px -2px 6px 4px rgba(255,255,255,0.12)';
       content.style.borderRadius = '5px';
       content.style.overflow = 'hidden';
       content.style.display = 'grid';
       content.style.gridTemplateRows = '3rem minmax(50px,75vh) 1.5rem';
       content.style.gridTemplateRows = '3rem auto 1.5rem';
-      content.style.gridTemplateColumns = '1rem minmax(auto,100%) 1rem';
+      content.style.gridTemplateColumns = '2rem minmax(auto,100%) 2rem';
       content.style.gridGap = '0.5rem';
       content.style.padding = '0.5rem 0';
       return content;
