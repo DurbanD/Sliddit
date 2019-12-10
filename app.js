@@ -12,38 +12,40 @@
 // ==/UserScript==
 
 class SlideShow {
-  constructor(links={}, counter=0) {
-    this.links = links;
-    this.counter = counter;
+  constructor(links=[], counter=0) {
     this.fetchJsonDefaultString = './.json?limit=100';
-    this.lastLink = {};
+    this.counter = counter;
+    this.links = this.generateLinks(links);
     if (parseInt(counter) >= parseInt(Object.keys(links).length)-50) {
-      this.getMoreLinks(this.links).then(()=>this.updateUI(this.links, this.counter)).then(()=>this.createKeyDownListeners());
+      this.links = this.generateLinks().then(() => this.updateUI(this.links, this.counter)).then(() => this.createKeyDownListeners());
     }
     else {
       this.createKeyDownListeners();
     }
   }
 
-  async getMoreLinks(linksPrimary) {
-    if (this.lastLink.data == undefined) {
-      let links = fetch(this.fetchJsonDefaultString).then((response) => response.json()).then((result) => links = result.data.children);
-      this.links = await links;
-      this.lastLink = this.getLastAvailableLink();
-      this.currentLink = this.getCurrentLink();
-      return links;
+  async generateLinks(linksPrimary = []) {
+    let linksList = linksPrimary;
+    if (linksList.length === 0) {
+      let newLinks = fetch(this.fetchJsonDefaultString).then((response) => response.json()).then((result) => newLinks = result.data.children);
+      await newLinks; 
+      linksList = newLinks;
     }
-    let extraLinks = fetch(this.fetchJsonDefaultString + `&after=${this.lastLink.data.name}`).then((response) => response.json()).then((result) => extraLinks = result.data.children);
-    await extraLinks;
-    this.lastLink = this.getLastAvailableLink();
-    let linkList = linksPrimary.concat(extraLinks);
-    this.links = linkList;
-    return this.links;
+    else {
+      let currentLast = linksList[linksList.length - 1];
+      let extraLinks = fetch(this.fetchJsonDefaultString + `&after=${currentLast.data.name}`).then((response) => response.json()).then((result) => extraLinks = result.data.children);
+      await extraLinks;
+      linksList = linksList.concat(extraLinks);
+    }
+    this.lastLink = linksList[linksList.length - 1];
+    this.currentLink = linksList[this.counter - 1];
+    this.links = linksList;
+    return linksList;
   }
 
   async getManyMoreLinks(desiredCallCount) {
     for (let i = 0; i < desiredCallCount; i++) {
-      await this.getMoreLinks(this.links);
+      await this.generateLinks(this.links);
     }
     return this.links;
   }
@@ -59,7 +61,7 @@ class SlideShow {
   nextLink() {
     this.counter++;
     if ((this.counter+1)/this.links.length >= 0.5) {
-      this.getMoreLinks(this.links).then(()=> this.currentLink = this.getCurrentLink());
+      this.generateLinks(this.links);
     }
     if (this.testLinkAgainstFilters(this.links[this.counter]) == true) {
       return this.updateUI(this.links, this.counter);
@@ -102,7 +104,7 @@ class SlideShow {
         window.open('.'+ this.currentLink.data.permalink);
       }
     };
-    return document.body.addEventListener('keydown', keyHandler);
+    return document.body.addEventListener('keyup', keyHandler);
   }
 
   createNavigationListeners() {
@@ -253,6 +255,12 @@ class SlideShow {
     window.location = url;
     return url;
   }
+
+  goToTop() {
+    this.links = {};
+    this.counter = 0;
+    this.updateUI(this.links,this.counter);
+  }
 }
 
 //////////////////////
@@ -332,10 +340,8 @@ class SlideShowUI {
     let slideBG = document.querySelector('#slideShowBG');
     const styleContainer = (content) => {
       content.style.background = 'rgba(225,225,255,0.05)';
-      content.style.width = '95vw';
       content.style.minHeight = '100px';
       content.style.maxHeight = '95vh';
-      // content.style.maxWidth = '1600px';
       content.style.width = '100vw';
       content.style.zIndex = '100';
       content.style.boxSizing = 'border-box';
@@ -797,21 +803,27 @@ class SlideShowUI {
 
     let generateContentFromCommonVideoDomain = () => {
       let linkVid = document.createElement('iframe');
-      linkVid.id = 'ssVidIframe'
-      linkVid.style.marginTop = '1.5rem';
-      linkVid.style.marginBottom = '1rem';
-      linkVid.setAttribute('loop', '');
+      let stylelinkVid = (content, parent) => {
+        let linkVidWidth = parent.scrollWidth * 0.618033;
+        let linkVidHeight = linkVidWidth * 0.618033;
+        content.height = `${linkVidHeight}`;
+        content.width = `${linkVidWidth}`;
+        content.allowFullscreen = true;
+        content.style.border = 'none';
+        content.style.marginTop = '1.5rem';
+        content.style.marginBottom = '1rem';
+        content.setAttribute('loop', '');
+        content.align = 'middle';
+        return content;
+      }
+      stylelinkVid(linkVid, linkMainDiv);
+      linkVid.id = 'ssVidIframe';
+
       let keyReg = /(?:viewkey=)\w+(?:&)/;
       if (keyReg.test(link.data.url)) {
         let embedKey = link.data.url.match(/(?:viewkey=)\w+(?:&)/).join().replace('viewkey=','').replace('&','');
         let vidSource = `https://${link.data.domain}/embed/${embedKey}`;
-        let vidWidth = '600';
-        let vidHeight = '350';
         linkVid.src = vidSource;
-        linkVid.height = vidHeight;
-        linkVid.width = vidWidth;
-        linkVid.allowFullscreen = true;
-        linkVid.style.border = '1px solid black';
 
         let container = generateContentContainer();
         container.appendChild(linkVid);
@@ -822,13 +834,7 @@ class SlideShowUI {
       if (youTubeWatchCodeReg.test(link.data.url)) {
         let embedKey =  link.data.url.match(/(?:v=)\w+-{0,1}\w+/).join().replace('v=','');
         let vidSource = `https://${link.data.domain}/embed/${embedKey}`;
-        let vidWidth = '600';
-        let vidHeight = '350';
         linkVid.src = vidSource;
-        linkVid.height = vidHeight;
-        linkVid.width = vidWidth;
-        linkVid.allowFullscreen = true;
-        linkVid.style.border = '1px solid black';
 
         let container = generateContentContainer();
         container.appendChild(linkVid);
@@ -844,14 +850,6 @@ class SlideShowUI {
           let vidSource = `https://${link.data.domain}/${vidKey}/DASH_720?source=fallback`;
           linkVid.src = vidSource;
         }
-        let vidWidth = '600';
-        let vidHeight = '400';
-        linkVid.height = vidHeight;
-        linkVid.width = vidWidth;
-        linkVid.allowFullscreen = true;
-        linkVid.style.border = '1px solid black';
-        linkVid.align = 'middle';
-
         let container = generateContentContainer();
         container.appendChild(linkVid);
         return container;
@@ -860,13 +858,7 @@ class SlideShowUI {
       if (link.data.domain == 'youtu.be') {
         let embedKey = link.data.url.match(/(?:\w\/)\w+-{0,1}\w+/).join().replace(/(?:\w\/)/,'');
         let vidSource = `https://www.youtube.com/embed/${embedKey}`;
-        let vidWidth = '600';
-        let vidHeight = '350';
         linkVid.src = vidSource;
-        linkVid.height = vidHeight;
-        linkVid.width = vidWidth;
-        linkVid.allowFullscreen = true;
-        linkVid.style.border = '1px solid black';
 
         let container = generateContentContainer();
         container.appendChild(linkVid);
@@ -1331,6 +1323,7 @@ class SlideShowSettings {
           let settingsOK = () => {
               storeSettingsValuesInLocalStorage();
               closeSettingsPanel();
+              return new SlideShow();
           }
           okBtn.addEventListener('click',settingsOK);
       }
