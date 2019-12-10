@@ -53,9 +53,11 @@ class SlideShow {
 
   filterOutDuplicateLinks(linkList) {
     let newList = [];
+    let nameList = [];
     for (let link of linkList) {
-      if (newList.indexOf(link) === -1) {
+      if (nameList.indexOf(link.data.title) === -1) {
         newList.push(link);
+        nameList.push(link.data.name);
       }
     }
     return newList;
