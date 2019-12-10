@@ -37,6 +37,7 @@ class SlideShow {
       await extraLinks;
       linksList = linksList.concat(extraLinks);
     }
+    linksList = this.filterOutDuplicateLinks(linksList);
     this.lastLink = linksList[linksList.length - 1];
     this.currentLink = linksList[this.counter - 1];
     this.links = linksList;
@@ -48,6 +49,16 @@ class SlideShow {
       await this.generateLinks(this.links);
     }
     return this.links;
+  }
+
+  filterOutDuplicateLinks(linkList) {
+    let newList = [];
+    for (let link of linkList) {
+      if (newList.indexOf(link) === -1) {
+        newList.push(link);
+      }
+    }
+    return newList;
   }
 
   getLastAvailableLink() {
