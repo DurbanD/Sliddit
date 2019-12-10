@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Sliddit
 // @namespace    http://www.github.com/DurbanD/Sliddit/
-// @version      0.7.4
+// @version      0.7.5
 // @description  Full-Screen Slideshow browsing for Reddit
 // @author       Durban
 // @match        https://www.reddit.com/*
@@ -53,27 +53,16 @@ class SlideShow {
 
   filterOutDuplicateLinks(linkList) {
     let newList = [];
-    // let nameList = [];
-    // for (let link of linkList) {
-    //   if (nameList.indexOf(link.data.title) === -1) {
-    //     newList.push(link);
-    //     nameList.push(link.data.name);
-    //   }
-    // }
     let nameList = {};
     for (let link of linkList) {
       if (nameList[link.data.title] === link.data.author) {
-        console.log(`Removed Duplicate Link: ${link.data.title} by ${link.data.author} in ${link.data.subreddit_name_prefixed}`);
+        // console.log(`Removed Duplicate Link: ${link.data.title} by ${link.data.author} in ${link.data.subreddit_name_prefixed}`);
         continue;
       }
       else {
         nameList[link.data.title] = link.data.author;
         newList.push(link);
       }
-      // if (nameList[link.data.title] === undefined) {
-      //   nameList[link.data.title] = link.data.author;
-      //   newList.push(link);
-      // }
     }
     return newList;
   }
@@ -282,12 +271,6 @@ class SlideShow {
     url = `./?limit=100`;
     window.location = url;
     return url;
-  }
-
-  goToTop() {
-    this.links = {};
-    this.counter = 0;
-    this.updateUI(this.links,this.counter);
   }
 }
 
