@@ -13,6 +13,7 @@
 
 class SlideShow {
   constructor(links=[], counter=0) {
+    new SlideShowUI(links,counter).generateLoadNotice(document.body);
     this.fetchJsonDefaultString = './.json?limit=100';
     this.counter = counter;
     this.links = this.generateLinks(links);
@@ -251,6 +252,9 @@ class SlideShow {
     this.currentLink = this.getCurrentLink();
     if (this.testLinkAgainstFilters(this.currentLink) === true) {
       let updatedSlideUI = new SlideShowUI(links, counter);
+      if (document.getElementById('sLoadingBackground')) {
+        updatedSlideUI.removeLoadNotice(document.body,'sLoadingBackground');
+      }
       updatedSlideUI.generateUI();
       this.createNavigationListeners();
     }
@@ -1100,6 +1104,37 @@ class SlideShowUI {
     this.createHead(this.links, this.counter); 
     this.createContent(this.mainLink);
     this.createFooter(this.links, this.counter);
+  }
+
+  generateLoadNotice(parent) {
+    let loadBackground = document.createElement('div');
+    loadBackground.id = 'sLoadingBackground';
+    let styleLoadNotice = (content) => {
+      content.style.position = 'absolute';
+      content.style.top = '0';
+      content.style.left = '0';
+      content.style.background = 'rgba(0,0,0,0.65)';
+      content.style.width = '100vw';
+      content.style.height = '100vh';
+      content.style.zIndex = '240';
+      content.style.display = 'flex';
+      content.style.flexDirection = 'column';
+      content.style.alignContent = 'center';
+      content.style.justifyContent = 'center';
+      content.style.alignItems = 'center';
+    }
+    styleLoadNotice(loadBackground);
+    let loadText = document.createElement('h1');
+    loadText.innerText = 'Loading...';
+    loadText.style.textAlign = 'center';
+    loadText.style.color = '#f4f4f4';
+    loadBackground.appendChild(loadText);
+    return parent.appendChild(loadBackground);
+  }
+
+  removeLoadNotice(parent, loadID) {
+    let loadBackground = document.getElementById(loadID);
+    return parent.removeChild(loadBackground);
   }
 }
 
