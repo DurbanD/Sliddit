@@ -53,12 +53,27 @@ class SlideShow {
 
   filterOutDuplicateLinks(linkList) {
     let newList = [];
-    let nameList = [];
+    // let nameList = [];
+    // for (let link of linkList) {
+    //   if (nameList.indexOf(link.data.title) === -1) {
+    //     newList.push(link);
+    //     nameList.push(link.data.name);
+    //   }
+    // }
+    let nameList = {};
     for (let link of linkList) {
-      if (nameList.indexOf(link.data.title) === -1) {
-        newList.push(link);
-        nameList.push(link.data.name);
+      if (nameList[link.data.title] === link.data.author) {
+        console.log(`Removed Duplicate Link: ${link.data.title} by ${link.data.author} in ${link.data.subreddit_name_prefixed}`);
+        continue;
       }
+      else {
+        nameList[link.data.title] = link.data.author;
+        newList.push(link);
+      }
+      // if (nameList[link.data.title] === undefined) {
+      //   nameList[link.data.title] = link.data.author;
+      //   newList.push(link);
+      // }
     }
     return newList;
   }
