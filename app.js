@@ -1152,7 +1152,12 @@ class SlideShowUI {
     loadText.style.textAlign = 'center';
     loadText.style.color = '#f4f4f4';
     loadBackground.appendChild(loadText);
-    return parent.appendChild(loadBackground);
+    parent.appendChild(loadBackground);
+    window.setTimeout(()=> {
+      if (document.getElementById(loadBackground.id)) {
+        parent.removeChild(loadBackground);
+      }
+    }, 6000);
   }
 
   removeLoadNotice(parent, loadID) {
