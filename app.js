@@ -14,27 +14,50 @@
 class SlideShow {
   constructor(links=[], counter=0) {
     new SlideShowUI(links,counter).generateLoadNotice(document.body);
-    this.fetchJsonDefaultString = './.json?limit=100';
+    this.fetchJsonDefaultString = '.json?limit=100';
     this.counter = counter;
-    this.links = this.generateLinks(links);
+    this.currentPath = document.URL.match(/\.com\/.*$/).join().replace('.com/','');
+
     if (parseInt(counter) >= parseInt(Object.keys(links).length)-50) {
-      this.links = this.generateLinks().then(() => this.updateUI(this.links, this.counter)).then(() => this.createKeyDownListeners());
+      this.links = this.generateLinks(links, this.currentPath, this.fetchJsonDefaultString).then(() => this.updateUI(this.links, this.counter)).then(() => this.createKeyDownListeners());
     }
     else {
       this.createKeyDownListeners();
     }
   }
 
-  async generateLinks(linksPrimary = []) {
+  getDefaultPath = () => {
+    let foundPath = '';
+    if (/\.com\/.*$/.test(document.URL)) {
+      foundPath = document.URL.match(/\.com\/.*$/).join().replace('.com/','');
+    }
+    return foundPath;
+  }
+
+  async generateLinks(linksPrimary = [], path = '', query= '.json?limit=100') {
     let linksList = linksPrimary;
+    let domain = 'www.reddit.com/';
+    let protocol = 'https://';
+    let linkPath;
+    if (typeof path !== "string") {
+      linkPath = '';
+    }
+    else {
+      linkPath = path;
+    }
+    if (/^http:\/\//.test(document.URL)) {
+      protocol = 'http://';
+    }
+    let fullPath = `${protocol}${domain}${linkPath}${query}`;
+
     if (linksList.length === 0) {
-      let newLinks = fetch(this.fetchJsonDefaultString).then((response) => response.json()).then((result) => newLinks = result.data.children);
+      let newLinks = fetch(fullPath).then((response) => response.json()).then((result) => newLinks = result.data.children);
       await newLinks; 
       linksList = newLinks;
     }
     else {
       let currentLast = linksList[linksList.length - 1];
-      let extraLinks = fetch(this.fetchJsonDefaultString + `&after=${currentLast.data.name}`).then((response) => response.json()).then((result) => extraLinks = result.data.children);
+      let extraLinks = fetch(`${fullPath}&after=${currentLast.data.name}`).then((response) => response.json()).then((result) => extraLinks = result.data.children);
       await extraLinks;
       linksList = linksList.concat(extraLinks);
     }
@@ -56,12 +79,11 @@ class SlideShow {
     let newList = [];
     let nameList = {};
     for (let link of linkList) {
-      if (nameList[link.data.title] === link.data.author) {
-        // console.log(`Removed Duplicate Link: ${link.data.title} by ${link.data.author} in ${link.data.subreddit_name_prefixed}`);
+      if (nameList[link.data.name] === true) {
         continue;
       }
       else {
-        nameList[link.data.title] = link.data.author;
+        nameList[link.data.name] = true;
         newList.push(link);
       }
     }
@@ -78,8 +100,9 @@ class SlideShow {
 
   nextLink() {
     this.counter++;
+    let path = this.getDefaultPath();
     if ((this.counter+1)/this.links.length >= 0.5) {
-      this.generateLinks(this.links);
+      this.generateLinks(this.links, path);
     }
     if (this.testLinkAgainstFilters(this.links[this.counter]) == true) {
       return this.updateUI(this.links, this.counter);
