@@ -438,7 +438,7 @@ class SlideShowUI {
 
       const addListeners = (content) => {
         content.onclick = () => {
-          window.open(`./${link.data.subreddit_name_prefixed}`);
+          window.open(`https://www.reddit.com/${link.data.subreddit_name_prefixed}`);
         }
         content.onmouseover = () => {
           content.style.cursor = 'pointer';
@@ -1043,7 +1043,7 @@ class SlideShowUI {
         let postedByInfoP = document.createElement('p');
         postedByInfoP.innerText = `Posted by ${postedBy}`;
         postedByInfoP.onclick = () => {
-          window.open(`./u/${postedBy}`);
+          window.open(`https://www.reddit.com/u/${postedBy}`);
         }
         postedByInfoP.onmouseover = () => {
           postedByInfoP.style.cursor = 'pointer';
