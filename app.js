@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Sliddit
 // @namespace    http://www.github.com/DurbanD/Sliddit/
-// @version      0.8.0
+// @version      0.8.1
 // @description  Full-Screen Slideshow browsing for Reddit
 // @author       Durban
 // @match        https://www.reddit.com/*
@@ -1413,8 +1413,9 @@ class SlideShowSettings {
       const addListeners = () => {
           let okBtn = document.getElementById('filter-form-ok-button');
           let settingsContainer = document.getElementById('sliddit-settings-bg');
-          let closeSettingsPanel = () => {
-              document.body.removeChild(settingsContainer);
+          let filterMain = document.getElementById('filter-form-main');
+          let closeSettingsPanel = (event) => {
+            document.body.removeChild(settingsContainer);
           }
 
           let storeSettingsValuesInLocalStorage = () => {
@@ -1434,29 +1435,29 @@ class SlideShowSettings {
               localStorage.setItem('sliddit-filter-settings', contentSettingsString);
           }
 
-          let settingsOK = () => {
-              storeSettingsValuesInLocalStorage();
-              closeSettingsPanel();
-              return new SlideShow([],0,this.url);
+          let settingsOK = (e) => {
+            storeSettingsValuesInLocalStorage();
+            closeSettingsPanel();
+            let url = this.url;
+            return new SlideShow([],0,url);
           }
+
+          settingsContainer.addEventListener('click',closeSettingsPanel);
+          filterMain.addEventListener('click',(event)=>event.stopPropagation());
           okBtn.addEventListener('click',settingsOK);
       }
       addListeners();
   
       const checkTheBoxes = () => {
-          let optionDict = this.savedSettings;
-          let filterForm = document.getElementById('filter-form-main');
-          let possibleBoxes = filterForm.querySelectorAll('input');
-          for (let box of possibleBoxes) {
-              let checkedValue = this.stringToBool(optionDict[`${box.id}`]);
-              box.checked = checkedValue;
-          }
+        let optionDict = this.savedSettings;
+        let filterForm = document.getElementById('filter-form-main');
+        let possibleBoxes = filterForm.querySelectorAll('input');
+        for (let box of possibleBoxes) {
+            let checkedValue = this.stringToBool(optionDict[`${box.id}`]);
+            box.checked = checkedValue;
+        }
       }
       checkTheBoxes();
-  }
-
-  getSavedSlideShowSettings = () => {
-      return this.savedSettings;
   }
 
   getLocalFilterSettings = () => {
