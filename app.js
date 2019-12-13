@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Sliddit
 // @namespace    http://www.github.com/DurbanD/Sliddit/
-// @version      0.8.1
+// @version      0.8.2
 // @description  Full-Screen Slideshow browsing for Reddit
 // @author       Durban
 // @match        https://www.reddit.com/*
@@ -1200,16 +1200,16 @@ class SlideShowUI {
       this.hideAllBodyNodes();
       this.createBackground();
       this.createExitButton();
-      new SlideShowSettings(this.dsURL).createWheel(0, 0, document.querySelector('#slideShowBG'));
     }
     if (!document.querySelector('#linkMainDiv')) {
       this.createContentContainer();
     }
-
+    
     this.destroyContainerContents();
     this.createHead(this.links, this.counter); 
     this.createContent(this.mainLink);
     this.createFooter(this.links, this.counter);
+    new SlideShowSettings(this.dsURL).createWheel(0, 0, document.querySelector('#slideShowBG'));
   }
 
   generateLoadNotice(parent) {
@@ -1268,7 +1268,12 @@ class SlideShowSettings {
   }
 
   createWheel(xPos,yPos,container) {
+      if (document.getElementById('settingsWheel')) {
+        let oldWheel = document.getElementById('settingsWheel');
+        oldWheel.parentElement.removeChild(oldWheel);
+      }
       let wheel = document.createElement('div');
+      wheel.id = 'settingsWheel';
       wheel.innerText = '⚙';
       const styleSettingsWheel = (content) => {
           let wheel = content;
@@ -1287,7 +1292,6 @@ class SlideShowSettings {
           wheel.style.position = 'absolute';
           wheel.style.left = `${xPos}px`;
           wheel.style.top = `${yPos}px`;
-          wheel.id = 'settingsWheel';
           return wheel;
       }
       styleSettingsWheel(wheel);
@@ -1439,7 +1443,7 @@ class SlideShowSettings {
             storeSettingsValuesInLocalStorage();
             closeSettingsPanel();
             let url = this.url;
-            return new SlideShow([],0,url);
+            new SlideShow([],0,url);
           }
 
           settingsContainer.addEventListener('click',closeSettingsPanel);
