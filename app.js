@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Sliddit
 // @namespace    http://www.github.com/DurbanD/Sliddit/
-// @version      0.7.9
+// @version      0.8.0
 // @description  Full-Screen Slideshow browsing for Reddit
 // @author       Durban
 // @match        https://www.reddit.com/*
@@ -12,32 +12,39 @@
 // ==/UserScript==
 
 class SlideShow {
-  constructor(links=[], counter=0) {
-    new SlideShowUI(links,counter).generateLoadNotice(document.body);
+  constructor(links=[], counter=0, url='https://www.reddit.com/') {
+    this.mainURL = url;
+    this.dissectedURL = this.dissectURL(this.mainURL);
+    this.mainProtocol = this.dissectURL(this.mainURL).urlProtocol;
+    this.mainDomain = this.dissectURL(this.mainURL).urlDomain;
+    this.mainPath = this.dissectURL(this.mainURL).urlPath;
+    new SlideShowUI(links,counter, this.dissectedURL).generateLoadNotice(document.body);
     this.fetchJsonDefaultString = '.json?limit=100';
     this.counter = counter;
-    this.currentPath = document.URL.match(/\.com\/.*$/).join().replace('.com/','');
-
     if (parseInt(counter) >= parseInt(Object.keys(links).length)-50) {
-      this.links = this.generateLinks(links, this.currentPath, this.fetchJsonDefaultString).then(() => this.updateUI(this.links, this.counter)).then(() => this.createKeyDownListeners());
+      this.links = this.generateLinks(links, this.mainPath, this.fetchJsonDefaultString).then(() => this.updateUI(this.links, this.counter)).then(() => this.createKeyDownListeners());
     }
     else {
       this.createKeyDownListeners();
     }
   }
 
-  getDefaultPath = () => {
-    let foundPath = '';
-    if (/\.com\/.*$/.test(document.URL)) {
-      foundPath = document.URL.match(/\.com\/.*$/).join().replace('.com/','');
+  dissectURL = (url) => {
+    try {
+      let urlProtocol = url.match(/https{0,1}:\/\//).join();
+      let urlDomain = url.match(/\/\/[\.\w]{1,}/).join().replace('//','');
+      let urlPath = url.match(/\w\/.*$/).join().replace(/\w\//,'');
+      return {urlProtocol, urlDomain, urlPath}
     }
-    return foundPath;
+    catch (err) {
+      throw err;
+    }
   }
 
   async generateLinks(linksPrimary = [], path = '', query= '.json?limit=100') {
     let linksList = linksPrimary;
-    let domain = 'www.reddit.com/';
-    let protocol = 'https://';
+    let domain = this.mainDomain;
+    let protocol = this.mainProtocol;
     let linkPath;
     if (typeof path !== "string") {
       linkPath = '';
@@ -45,21 +52,29 @@ class SlideShow {
     else {
       linkPath = path;
     }
-    if (/^http:\/\//.test(document.URL)) {
-      protocol = 'http://';
-    }
-    let fullPath = `${protocol}${domain}${linkPath}${query}`;
+    let fullPath = `${protocol}${domain}/${linkPath}${query}`;
 
     if (linksList.length === 0) {
-      let newLinks = fetch(fullPath).then((response) => response.json()).then((result) => newLinks = result.data.children);
-      await newLinks; 
-      linksList = newLinks;
+      try {
+        let newLinks = fetch(fullPath).then((response) => response.json()).then((result) => newLinks = result.data.children);
+        await newLinks; 
+        linksList = newLinks;
+      } catch (err) {
+        console.log(`Unable to generate links for ${fullPath}`);
+        throw err;
+      }
     }
     else {
-      let currentLast = linksList[linksList.length - 1];
-      let extraLinks = fetch(`${fullPath}&after=${currentLast.data.name}`).then((response) => response.json()).then((result) => extraLinks = result.data.children);
-      await extraLinks;
-      linksList = linksList.concat(extraLinks);
+      try {
+        let currentLast = linksList[linksList.length - 1];
+        let extraLinks = fetch(`${fullPath}&after=${currentLast.data.name}`).then((response) => response.json()).then((result) => extraLinks = result.data.children);
+        await extraLinks;
+        linksList = linksList.concat(extraLinks);
+      }
+      catch (err) {
+        console.log(`Unable to generate links for ${fullPath}&after=${currentLast.data.name}`);
+        throw err;
+      }
     }
     linksList = this.filterOutDuplicateLinks(linksList);
     this.lastLink = linksList[linksList.length - 1];
@@ -100,9 +115,9 @@ class SlideShow {
 
   nextLink() {
     this.counter++;
-    let path = this.getDefaultPath();
+    let path = this.mainPath;
     if ((this.counter+1)/this.links.length >= 0.5) {
-      this.generateLinks(this.links, path);
+      this.generateLinks(this.links, path, this.fetchJsonDefaultString);
     }
     if (this.testLinkAgainstFilters(this.links[this.counter]) == true) {
       return this.updateUI(this.links, this.counter);
@@ -127,6 +142,8 @@ class SlideShow {
   }
 
   createKeyDownListeners() {
+    let ssContainer = document.getElementById('slideShowBG');
+    ssContainer.focus();
     let keyHandler = () => {
       if (event.code == 'ArrowRight') {
         event.preventDefault();
@@ -141,11 +158,60 @@ class SlideShow {
         this.exitSlideShow();
       }
       if (event.code == 'Enter') {
+        document.body.removeEventListener('keyup', keyHandler);
         event.preventDefault();
         window.open('.'+ this.currentLink.data.permalink);
       }
+      if (event.code == 'ArrowUp') {
+        document.body.removeEventListener('keyup', keyHandler);
+        let postedIn = document.getElementById('ssPostedIn');
+        postedIn.click();
+      }
+      if (event.code == 'ArrowDown') {
+        document.body.removeEventListener('keyup', keyHandler);
+        let postedBy = document.getElementById('ssPostedBy');
+        postedBy.click();
+      }
+      if (event.code == 'Space') {
+        document.body.removeEventListener('keyup', keyHandler);
+        event.preventDefault();
+        return new SlideShow();
+      }
     };
-    return document.body.addEventListener('keyup', keyHandler);
+    if (document.getElementById('ssPostedBy')) {
+      let postedBy = document.getElementById('ssPostedBy');
+      postedBy.addEventListener('click', ()=> {
+        document.body.removeEventListener('keyup',keyHandler);
+      });
+    }
+    if (document.getElementById('ssPostedIn')) {
+      let postedBy = document.getElementById('ssPostedIn');
+      postedBy.addEventListener('click', ()=> {
+        document.body.removeEventListener('keyup', keyHandler);
+      });
+    }
+    document.body.addEventListener('keyup', keyHandler);
+
+    let keyDownHandler = () => {
+      if (event.code == 'ArrowRight') {
+        let nextButton = document.getElementById('ssNextButton');
+        nextButton.style.background = 'rgba(255,255,255,0.2)';
+      }
+      if (event.code == 'ArrowLeft') {
+        event.preventDefault();
+        let previousButton = document.getElementById('ssPreviousButton');
+        previousButton.style.background = 'rgba(255,255,255,0.2)';
+      }
+      if (event.code == 'ArrowUp') {
+        let postedInP = document.getElementById('ssPostedIn');
+        postedInP.style.background = 'rgba(255,255,255,0.2)';
+      }
+      if (event.code == 'ArrowDown') {
+        let postedByP = document.getElementById('ssPostedBy');
+        postedByP.style.background = 'rgba(255,255,255,0.2)';
+      }
+    }
+    return document.body.addEventListener('keydown',keyDownHandler);
   }
 
   createNavigationListeners() {
@@ -213,7 +279,7 @@ class SlideShow {
   }
 
   testLinkAgainstFilters(link) {
-    let filterList = new SlideShowSettings().generateStartupSettings();
+    let filterList = new SlideShowSettings(this.dissectedURL).generateStartupSettings();
     let nsfwStatus = link.data.over_18;
     const getNSFWSetting = () => {
       if (filterList['nsfw-filter-hide'] === true) {
@@ -273,16 +339,23 @@ class SlideShow {
   updateUI(links,counter) {
     this.lastLink = this.getLastAvailableLink();
     this.currentLink = this.getCurrentLink();
-    if (this.testLinkAgainstFilters(this.currentLink) === true) {
-      let updatedSlideUI = new SlideShowUI(links, counter);
-      if (document.getElementById('sLoadingBackground')) {
-        updatedSlideUI.removeLoadNotice(document.body,'sLoadingBackground');
+    let dsURL = this.dissectedURL;
+    try {
+      if (this.testLinkAgainstFilters(this.currentLink) === true) {
+        let updatedSlideUI = new SlideShowUI(links, counter, dsURL);
+        if (document.getElementById('sLoadingBackground')) {
+          updatedSlideUI.removeLoadNotice(document.body,'sLoadingBackground');
+        }
+        updatedSlideUI.generateUI();
+        this.createNavigationListeners();
       }
-      updatedSlideUI.generateUI();
-      this.createNavigationListeners();
+      else {
+        this.nextLink();
+      }
     }
-    else {
-      this.nextLink();
+    catch (err) {
+      console.log('There was an error updating the app with your current settings. Please adjust settings and try again');
+      throw err;
     }
   }
 
@@ -313,9 +386,14 @@ class SlideShow {
 /////
 
 class SlideShowUI {
-  constructor(links, counter) {
+  constructor(links, counter, dissectedURL) {
     this.links = links;
     this.counter = counter;
+    this.dsURL = dissectedURL;
+    this.protocol = dissectedURL.urlProtocol;
+    this.domain = dissectedURL.urlDomain;
+    this.path = dissectedURL.urlPath;
+    this.url = `${this.protocol}${this.domain}/${this.path}`;
     this.mainLink = this.links[this.counter];
     this.lastLink = this.links[this.links.length-1];
     this.firstLink = this.links[0];
@@ -432,13 +510,16 @@ class SlideShowUI {
 
     let generatePostedIn = () => {
       let postedInSubRedditP = document.createElement('p');
+      postedInSubRedditP.id = 'ssPostedIn';
       postedInSubRedditP.innerText = `${link.data.subreddit_name_prefixed}`;
       postedInSubRedditP.style.textAlign = 'left';
       postedInSubRedditP.style.paddingLeft = '1rem';
 
       const addListeners = (content) => {
+
         content.onclick = () => {
-          window.open(`https://www.reddit.com/${link.data.subreddit_name_prefixed}`);
+          let url = `${this.protocol}${this.domain}/${link.data.subreddit_name_prefixed}`;
+          new SlideShow([],0,url); 
         }
         content.onmouseover = () => {
           content.style.cursor = 'pointer';
@@ -1021,7 +1102,7 @@ class SlideShowUI {
       
       return footerDiv;
     }
-    let generateCenterInfo = function(link) {
+    let generateCenterInfo = (link) => {
       let postedBy = link.data.author;
       let commentCount = link.data.num_comments;
       let karmaCount = link.data.ups;
@@ -1039,11 +1120,14 @@ class SlideShowUI {
         karmaCountP.innerText = `${karmaCount} Karma`;
         return karmaCountP;
       }
-      let generatePostedByP = function(postedBy) {
+      let generatePostedByP = (postedBy) => {
         let postedByInfoP = document.createElement('p');
+        postedByInfoP.id = 'ssPostedBy';
         postedByInfoP.innerText = `Posted by ${postedBy}`;
+
         postedByInfoP.onclick = () => {
-          window.open(`https://www.reddit.com/u/${postedBy}`);
+          let url = `${this.protocol}${this.domain}/u/${postedBy}`;
+          new SlideShow([],0,url);
         }
         postedByInfoP.onmouseover = () => {
           postedByInfoP.style.cursor = 'pointer';
@@ -1112,12 +1196,11 @@ class SlideShowUI {
   }
 
   generateUI() {
-
     if (!document.querySelector('#slideShowBG')) {
       this.hideAllBodyNodes();
       this.createBackground();
       this.createExitButton();
-      new SlideShowSettings().createWheel(0, 0, document.querySelector('#slideShowBG'));
+      new SlideShowSettings(this.dsURL).createWheel(0, 0, document.querySelector('#slideShowBG'));
     }
     if (!document.querySelector('#linkMainDiv')) {
       this.createContentContainer();
@@ -1166,54 +1249,6 @@ class SlideShowUI {
   }
 }
 
-const createLaunch = function() {
-  let styleTab = (content) => {
-    content.innerHTML = '<p>Sliddit</p>';
-    content.style.color = '#8cb3d9';
-    content.style.background = '#262626';
-    content.style.padding = '2px 6px 0px 6px';
-    content.onmouseover = function() {
-      content.style.cursor = 'pointer';
-    }
-    content.onclick = function() {
-      if(/count=\d+/.test(document.URL) == true) {
-        let countUrlMethod = document.URL.match(/count=\d+/).join();
-        let countNumber = countUrlMethod.match(/\d+$/).join();
-        let SS_Main = new SlideShow({},parseInt(countNumber-1));
-        return SS_Main;
-      }
-      let Slide = new SlideShow();
-      return Slide;
-    }
-  }
-  if (document.querySelector('ul.tabmenu')) {
-    let newTab = document.createElement('li');
-    let tabs = document.querySelector('ul.tabmenu');
-    newTab.classList = tabs.lastChild.classList;
-    styleTab(newTab);
-    return tabs.appendChild(newTab);
-  }
-  else {
-    let launchButton = document.createElement('div');
-    launchButton.id = 'ssLaunch';
-    const styleLaunchButton = (content) => {
-      content.style.width = '3rem';
-      content.style.height = '1.5rem';
-      content.style.position = 'fixed';
-      content.style.top = '3rem';
-      content.style.right = '10px';
-      content.style.zIndex = '99';
-      content.style.border = '1px solid rgba(225,225,255,0.2)';
-      content.style.borderTop = 'none';
-      content.style.borderRadius = '5px';
-      return content;
-    }
-    styleLaunchButton(launchButton);
-    styleTab(launchButton);
-    return document.body.appendChild(launchButton);
-  }
-}
-
 
 //////////////////
 /////////////
@@ -1223,8 +1258,13 @@ const createLaunch = function() {
 //////////////
 
 class SlideShowSettings {
-  constructor() {
+  constructor(dissectedURL) {
       this.savedSettings = this.generateStartupSettings();
+      this.dsURL = dissectedURL;
+      this.protocol = this.dsURL.urlProtocol;
+      this.domain = this.dsURL.urlDomain;
+      this.path = this.dsURL.urlPath;
+      this.url = `${this.protocol}${this.domain}/${this.path}`;
   }
 
   createWheel(xPos,yPos,container) {
@@ -1262,7 +1302,7 @@ class SlideShowSettings {
           }
   
           content.onclick = () => {
-              return new SlideShowSettings().createSettingsPanel();
+              return this.createSettingsPanel();
           }
   
       }
@@ -1397,7 +1437,7 @@ class SlideShowSettings {
           let settingsOK = () => {
               storeSettingsValuesInLocalStorage();
               closeSettingsPanel();
-              return new SlideShow();
+              return new SlideShow([],0,this.url);
           }
           okBtn.addEventListener('click',settingsOK);
       }
@@ -1451,6 +1491,55 @@ class SlideShowSettings {
     }
     return string;
   }      
+}
+
+
+const createLaunch = function() {
+  let styleTab = (content) => {
+    content.innerHTML = '<p>Sliddit</p>';
+    content.style.color = '#8cb3d9';
+    content.style.background = '#262626';
+    content.style.padding = '2px 6px 0px 6px';
+    content.onmouseover = function() {
+      content.style.cursor = 'pointer';
+    }
+    content.onclick = function() {
+      if(/count=\d+/.test(document.URL) == true) {
+        let countUrlMethod = document.URL.match(/count=\d+/).join();
+        let countNumber = countUrlMethod.match(/\d+$/).join();
+        let SS_Main = new SlideShow([],parseInt(countNumber-1),document.URL);
+        return SS_Main;
+      }
+      let Slide = new SlideShow([],0,document.URL);
+      return Slide;
+    }
+  }
+  if (document.querySelector('ul.tabmenu')) {
+    let newTab = document.createElement('li');
+    let tabs = document.querySelector('ul.tabmenu');
+    newTab.classList = tabs.lastChild.classList;
+    styleTab(newTab);
+    return tabs.appendChild(newTab);
+  }
+  else {
+    let launchButton = document.createElement('div');
+    launchButton.id = 'ssLaunch';
+    const styleLaunchButton = (content) => {
+      content.style.width = '3rem';
+      content.style.height = '1.5rem';
+      content.style.position = 'fixed';
+      content.style.top = '3rem';
+      content.style.right = '10px';
+      content.style.zIndex = '99';
+      content.style.border = '1px solid rgba(225,225,255,0.2)';
+      content.style.borderTop = 'none';
+      content.style.borderRadius = '5px';
+      return content;
+    }
+    styleLaunchButton(launchButton);
+    styleTab(launchButton);
+    return document.body.appendChild(launchButton);
+  }
 }
 
 window.addEventListener('load', createLaunch());
