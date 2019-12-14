@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Sliddit
 // @namespace    http://www.github.com/DurbanD/Sliddit/
-// @version      0.8.2
+// @version      0.8.3
 // @description  Full-Screen Slideshow browsing for Reddit
 // @author       Durban
 // @match        https://www.reddit.com/*
@@ -18,15 +18,9 @@ class SlideShow {
     this.mainProtocol = this.dissectURL(this.mainURL).urlProtocol;
     this.mainDomain = this.dissectURL(this.mainURL).urlDomain;
     this.mainPath = this.dissectURL(this.mainURL).urlPath;
-    new SlideShowUI(links,counter, this.dissectedURL).generateLoadNotice(document.body);
     this.fetchJsonDefaultString = '.json?limit=100';
     this.counter = counter;
-    if (parseInt(counter) >= parseInt(Object.keys(links).length)-50) {
-      this.links = this.generateLinks(links, this.mainPath, this.fetchJsonDefaultString).then(() => this.updateUI(this.links, this.counter)).then(() => this.createKeyDownListeners());
-    }
-    else {
-      this.createKeyDownListeners();
-    }
+    this.generateAsyncStartup(links,this.mainPath,this.fetchJsonDefaultString);
   }
 
   dissectURL = (url) => {
@@ -35,6 +29,57 @@ class SlideShow {
       let urlDomain = url.match(/\/\/[\.\w]{1,}/).join().replace('//','');
       let urlPath = url.match(/\w\/.*$/).join().replace(/\w\//,'');
       return {urlProtocol, urlDomain, urlPath}
+    }
+    catch (err) {
+      throw err;
+    }
+  }
+  async getUser() {
+    let protocol = this.mainProtocol;
+    let domain = this.mainDomain;
+    let selfQuery = '/api/me.json';
+    let getSelf = await fetch(`${protocol}${domain}${selfQuery}`).then(r=>r.json()).then(res=> res);
+    return getSelf;
+  }
+
+  async generateUserModhash() {
+    let user = await this.getUser();
+    let xModHash = user.data.modhash;
+    return xModHash;
+  }
+
+  async generateAsyncStartup(linksList,path,query) {
+    let startupLinks = linksList;
+    let startupSlideUI = new SlideShowUI(startupLinks, this.counter, this.dissectedURL);
+      try {
+        startupSlideUI.generateLoadNotice(document.body);
+        let modhash = await this.generateUserModhash();
+        this.currentModHash = modhash;
+        let user = await this.getUser();
+        this.currentUser = user;
+        let links = await this.generateLinks(startupLinks,path,query);
+        this.links = links;
+        this.updateUI(this.links, this.counter);
+        this.createKeyDownListeners();
+      }
+      catch (err) {
+        throw err;
+      }
+  }
+
+  async getSelectedNumberOfLinks(path, n) {
+    let linkCount = n;
+    let protocol = this.mainProtocol;
+    let domain = this.mainDomain;
+    let linkPath = path;
+    let query = `.json?limit=${linkCount}`;
+    let url = `${protocol}${domain}/${linkPath}${query}`;
+    try {
+      let links = await fetch(url).then(r=>r.json()).then(res=>res.data.children);
+      if (!links[startNumber+rangeNumber]) {
+        rangeNumber = links.length - startNumber;
+      }
+    return links.slice(startNumber, rangeNumber);
     }
     catch (err) {
       throw err;
@@ -88,6 +133,39 @@ class SlideShow {
       await this.generateLinks(this.links);
     }
     return this.links;
+  }
+  
+  async voteOnLink(voteNumber, link) {
+    let postID = link.data.name;
+    let dir = voteNumber;
+    let rank = 2;
+    let xModHash = await this.generateUserModhash();
+    this.currentModhash = await xModHash;
+    let protocol = this.mainProtocol;
+    let domain = this.mainDomain;
+    let votePath = '/api/vote';
+    let query = `?id=${postID}&dir=${dir}&rank=${rank}`;
+    let queryURL = `${protocol}${domain}${votePath}${query}`;
+    let pkg = {
+        method: 'POST',
+        headers: {
+            'X-Modhash' : xModHash
+        }
+    }
+    try {
+        console.log(pkg);
+        let attemptPost = fetch(queryURL,pkg).then(r=>attemptPost = r);
+        await attemptPost;
+        if (attemptPost.statusText !== "OK") {
+            console.log(`Failure to Upvote: \n`, link.data);
+            console.log (`There was an error sending the post request.
+Status: ${attemptPost.status}\nStatus Text: ${attemptPost.statusText}`);
+            console.log(`Response: \n`, attemptPost);
+        }
+    }
+    catch (err) {
+        throw err;
+    }
   }
 
   filterOutDuplicateLinks(linkList) {
@@ -190,7 +268,6 @@ class SlideShow {
         document.body.removeEventListener('keyup', keyHandler);
       });
     }
-    document.body.addEventListener('keyup', keyHandler);
 
     let keyDownHandler = () => {
       if (event.code == 'ArrowRight') {
@@ -211,6 +288,12 @@ class SlideShow {
         postedByP.style.background = 'rgba(255,255,255,0.2)';
       }
     }
+    document.body.addEventListener('keydown',(e)=> {
+      e.stopPropagation();
+      e.stopImmediatePropagation();
+      e.preventDefault();
+    });
+    document.body.addEventListener('keyup', keyHandler);
     return document.body.addEventListener('keydown',keyDownHandler);
   }
 
@@ -1497,7 +1580,6 @@ class SlideShowSettings {
     return string;
   }      
 }
-
 
 const createLaunch = function() {
   let styleTab = (content) => {
