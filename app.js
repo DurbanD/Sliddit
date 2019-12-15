@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Sliddit
 // @namespace    http://www.github.com/DurbanD/Sliddit/
-// @version      0.8.3
+// @version      0.9
 // @description  Full-Screen Slideshow browsing for Reddit
 // @author       Durban
 // @match        https://www.reddit.com/*
@@ -13,6 +13,7 @@
 
 class SlideShow {
   constructor(links=[], counter=0, url='https://www.reddit.com/') {
+    this.removeDefaultListeners();
     this.mainURL = url;
     this.dissectedURL = this.dissectURL(this.mainURL);
     this.mainProtocol = this.dissectURL(this.mainURL).urlProtocol;
@@ -21,6 +22,23 @@ class SlideShow {
     this.fetchJsonDefaultString = '.json?limit=100';
     this.counter = counter;
     this.generateAsyncStartup(links,this.mainPath,this.fetchJsonDefaultString);
+  }
+
+  removeDefaultListeners = () => {
+    while (document.getElementsByClassName('RES-keyNav-activeThing') || document.getElementsByClassName('res-selected')) {
+      if (document.getElementsByClassName('RES-keyNav-activeThing').length > 0) {
+        document.getElementsByClassName('RES-keyNav-activeThing')[0].classList.remove('RES-keyNav-activeThing');
+      }
+      if (document.getElementsByClassName('RES-keyNav-activeElement').length > 0) {
+        document.getElementsByClassName('RES-keyNav-activeElement')[0].classList.remove('RES-keyNav-activeElement');
+      }
+      if (document.getElementsByClassName('res-selected').length > 0) {
+        document.getElementsByClassName('res-selected')[0].classList.remove('res-selected');
+      }
+      if (document.getElementsByClassName('RES-keyNav-activeThing').length <= 0 && document.getElementsByClassName('res-selected').length <= 0 && document.getElementsByClassName('RES-keyNav-activeElement').length <= 0) {
+        break;
+      }
+    }
   }
 
   dissectURL = (url) => {
@@ -134,7 +152,73 @@ class SlideShow {
     }
     return this.links;
   }
-  
+
+  // action = 1 || 0
+  async saveOrUnsaveLink(action, link) {
+    let linkID = link.data.name;
+    let saveCategory = 'sliddit';
+    let xModHash = await this.generateUserModhash();
+    this.currentModhash = await xModHash;
+    let savePath, query;
+    if (action == 1) {
+      savePath = '/api/save';
+      query = `?id=${linkID}&category=${saveCategory}`;
+    }
+    if (action == 0) {
+      savePath = '/api/unsave';
+      query = `?id=${linkID}`;
+    }
+    let queryURL = `${this.mainProtocol}${this.mainDomain}${savePath}${query}`;
+    let pkg = {
+      method: 'POST',
+      headers: {
+        'X-Modhash' : xModHash
+      }
+    }
+    try {
+      let postResponse = await fetch(queryURL, pkg).then(r=>r);
+      if (postResponse.statusText !== "OK") {
+        console.log(`Failure to Upvote: \n`, link.data);
+        console.log(`Response: \n`, postResponse);
+      }
+      else {
+        return true;
+      }
+    }
+    catch (err) {
+      throw err;
+    }
+  }
+
+  // action = "sub" || "unsub";
+  async subscribeOrUnsubscribeToLinkedSubreddit(action, link) {
+    let subredditID = link.data.subreddit_id;
+    let xModHash = await this.generateUserModhash();
+    this.currentModHash = xModHash;
+    let query = `/api/subscribe?action=${action}&sr=${subredditID}&skip_initial_defaults=true`;
+    let url = `${this.mainProtocol}${this.mainDomain}${query}`;
+    let pkg = {
+      method: "POST",
+      headers: {
+      'X-Modhash': xModHash
+      }
+    }
+    try {
+      let postResponse = await fetch(url, pkg).then(r=>r);
+      if (postResponse.statusText !== "OK") {
+        console.log(`Failure to Upvote: \n`, link.data);
+        console.log(`Response: \n`, postResponse);
+      }
+      else {
+        return true;
+      }
+    }
+    catch (err) {
+      throw err;
+    }
+  }
+
+  //voteNumber = -1 || 0 || 1
   async voteOnLink(voteNumber, link) {
     let postID = link.data.name;
     let dir = voteNumber;
@@ -153,18 +237,18 @@ class SlideShow {
         }
     }
     try {
-        console.log(pkg);
-        let attemptPost = fetch(queryURL,pkg).then(r=>attemptPost = r);
-        await attemptPost;
-        if (attemptPost.statusText !== "OK") {
-            console.log(`Failure to Upvote: \n`, link.data);
-            console.log (`There was an error sending the post request.
-Status: ${attemptPost.status}\nStatus Text: ${attemptPost.statusText}`);
-            console.log(`Response: \n`, attemptPost);
-        }
+      let attemptPost = fetch(queryURL,pkg).then(r=>attemptPost = r);
+      await attemptPost;
+      if (attemptPost.statusText !== "OK") {
+        console.log(`Failure to Upvote: \n`, link.data);
+        console.log(`Response: \n`, attemptPost);
+      }
+      else {
+        return true;
+      }
     }
     catch (err) {
-        throw err;
+      throw err;
     }
   }
 
@@ -222,6 +306,7 @@ Status: ${attemptPost.status}\nStatus Text: ${attemptPost.statusText}`);
   createKeyDownListeners() {
     let ssContainer = document.getElementById('slideShowBG');
     ssContainer.focus();
+
     let keyHandler = () => {
       if (event.code == 'ArrowRight') {
         event.preventDefault();
@@ -237,18 +322,23 @@ Status: ${attemptPost.status}\nStatus Text: ${attemptPost.statusText}`);
       }
       if (event.code == 'Enter') {
         document.body.removeEventListener('keyup', keyHandler);
+        event.stopImmediatePropagation();
         event.preventDefault();
         window.open('.'+ this.currentLink.data.permalink);
       }
       if (event.code == 'ArrowUp') {
-        document.body.removeEventListener('keyup', keyHandler);
-        let postedIn = document.getElementById('ssPostedIn');
-        postedIn.click();
+        // document.body.removeEventListener('keyup', keyHandler);
+        // let postedIn = document.getElementById('ssPostedIn');
+        // postedIn.click();
+        let upVoteButton = document.getElementById('ssUpVoteButton');
+        upVoteButton.click();
       }
       if (event.code == 'ArrowDown') {
-        document.body.removeEventListener('keyup', keyHandler);
-        let postedBy = document.getElementById('ssPostedBy');
-        postedBy.click();
+        // document.body.removeEventListener('keyup', keyHandler);
+        // let postedBy = document.getElementById('ssPostedBy');
+        // postedBy.click();
+        let downVoteButton = document.getElementById('ssDownVoteButton');
+        downVoteButton.click();
       }
       if (event.code == 'Space') {
         document.body.removeEventListener('keyup', keyHandler);
@@ -280,12 +370,12 @@ Status: ${attemptPost.status}\nStatus Text: ${attemptPost.statusText}`);
         previousButton.style.background = 'rgba(255,255,255,0.2)';
       }
       if (event.code == 'ArrowUp') {
-        let postedInP = document.getElementById('ssPostedIn');
-        postedInP.style.background = 'rgba(255,255,255,0.2)';
+        let upVoteButton = document.getElementById('ssUpVoteButton');
+        upVoteButton.style.background = 'rgba(255,255,255,0.2)';
       }
       if (event.code == 'ArrowDown') {
-        let postedByP = document.getElementById('ssPostedBy');
-        postedByP.style.background = 'rgba(255,255,255,0.2)';
+        let downVoteButton = document.getElementById('ssDownVoteButton');
+        downVoteButton.style.background = 'rgba(255,255,255,0.2)';
       }
     }
     document.body.addEventListener('keydown',(e)=> {
@@ -298,9 +388,103 @@ Status: ${attemptPost.status}\nStatus Text: ${attemptPost.statusText}`);
   }
 
   createNavigationListeners() {
+    let link = this.getCurrentLink();
     let ssNext = document.getElementById('ssNextButton');
     let ssPrevious = document.getElementById('ssPreviousButton');
-    let ssExit = document.getElementById('ssExit');
+    let ssOptionNav = document.getElementById('ssOptionFlex');
+    let ssExit = document.getElementById('ssExitButton');
+
+    let clickToSaveOrClear = async () => {
+      if (link.data.saved === true) { //If the button is clicked and the link is already saved, we want to unsave it.
+        try {
+          let saveState = await this.saveOrUnsaveLink(0,link);
+          if (saveState === true) {
+            link.data.saved = false;
+            this.links[this.counter].data.saved = false;
+            return this.updateUI(this.links, this.counter);
+          }
+        }
+        catch (err) {
+          throw err;
+        }
+      }
+      else { // Otherwise, Save it and update the UI to show it's status
+        try {
+          let saveState = await this.saveOrUnsaveLink(1,link);
+          if (saveState === true) {
+            link.data.saved = true;
+            this.links[this.counter].data.saved = true;
+            return this.updateUI(this.links, this.counter);
+          }
+        }
+        catch (err) {
+          throw err;
+        }
+      }
+    }
+
+    let clickToUpVoteOrClear = async () => {
+      if (link.data.likes === true) { 
+        try {
+          let likeState = await this.voteOnLink(0, link);
+          if (likeState === true) {
+            link.data.likes = null;
+            this.links[this.counter].data.likes = null;
+            return this.updateUI(this.links, this.counter);
+          }
+        }
+        catch (err) {
+          throw err;
+        }
+      }
+      else { 
+        try {
+          let likeState = await this.voteOnLink(1, link);
+          if (likeState === true) {
+            link.data.likes = true;
+            this.links[this.counter].data.likes = true;
+            return this.updateUI(this.links, this.counter);
+          }
+        }
+        catch (err) {
+          throw err;
+        }
+      }
+    }
+
+    let clickToDownVoteOrClear = async () => {
+      if (link.data.likes === false) { 
+        try {
+          let likeState = await this.voteOnLink(0, link);
+          if (likeState === true) {
+            link.data.likes = null;
+            this.links[this.counter].data.likes = null;
+            return this.updateUI(this.links, this.counter);
+          }
+        }
+        catch (err) {
+          throw err;
+        }
+      }
+      else { 
+        try {
+          let likeState = await this.voteOnLink(-1, link);
+          if (likeState === true) {
+            link.data.likes = false;
+            this.links[this.counter].data.likes = false;
+            return this.updateUI(this.links, this.counter);
+          }
+        }
+        catch (err) {
+          throw err;
+        }
+      }
+    }
+
+    let openSettingsPanel = () => {
+      let ssSettings = new SlideShowSettings(this.dissectedURL);
+      ssSettings.createSettingsPanel();
+    }
     let nextLinkListenerFunction = () => {
       this.nextLink();
     };
@@ -311,9 +495,20 @@ Status: ${attemptPost.status}\nStatus Text: ${attemptPost.statusText}`);
       ssNext.addEventListener('click', nextLinkListenerFunction);
       ssPrevious.addEventListener('click', previousLinkListenerFunction);
     }
-    ssExit.addEventListener('click', () => {
-      this.exitSlideShow();
-    })
+    if (ssOptionNav) {
+      let ssOptionsSettingsNav = document.getElementById('ssSettingsWheel');
+      let ssOptionsSave = document.getElementById('ssSaveButton');
+      let ssOptionUpVote = document.getElementById('ssUpVoteButton');
+      let ssOptionDownVote = document.getElementById('ssDownVoteButton');
+      // let ssAnchorButton = document.getElementById('ssAnchorButton');
+      ssOptionsSettingsNav.addEventListener('click',openSettingsPanel);
+      ssOptionsSave.onclick = clickToSaveOrClear;
+      ssOptionUpVote.addEventListener('click', clickToUpVoteOrClear)
+      ssOptionDownVote.addEventListener('click', clickToDownVoteOrClear);
+    }
+    if (ssExit) {
+      ssExit.addEventListener('click',this.exitSlideShow);
+    }
   }
 
   getLinkType(link) {
@@ -419,7 +614,7 @@ Status: ${attemptPost.status}\nStatus Text: ${attemptPost.statusText}`);
     return true;
   }
 
-  updateUI(links,counter) {
+  updateUI(links, counter) {
     this.lastLink = this.getLastAvailableLink();
     this.currentLink = this.getCurrentLink();
     let dsURL = this.dissectedURL;
@@ -507,30 +702,136 @@ class SlideShowUI {
     return document.body.appendChild(fullScreenBackground);
   }
 
-  createExitButton() {
-    let exitButtonDiv = document.createElement('div');
-    let slideBG = document.querySelector('#slideShowBG');
-    exitButtonDiv.id = 'ssExit';
-    const styleExitButton = (content) => {
-      content.style.position = 'absolute';
-      content.style.top = '5px';
-      content.style.right = '5px';
-      content.style.height = '1.5rem';
-      content.style.width = '1.5rem';
-      content.style.border = '1px solid rgba(150,150,175,0.3)';
-      content.innerText = 'X';
-      content.style.color = 'rgba(150,150,175,0.9)';
-      content.style.alignItems = 'center';
-      content.style.textAlign = 'center';
-      content.style.paddingTop = '6px';
-      return content;
+  createButtonByType(xPos=null,yPos=null,buttonType,parent) {
+    let id, buttonText;
+    switch(buttonType) {
+      case "up" :
+        id = 'ssUpVoteButton';
+        buttonText = '▲';
+        break;
+      case "down":
+        id = 'ssDownVoteButton';
+        buttonText = '▼';
+        break;
+      case "save":
+        id = 'ssSaveButton';
+        buttonText = '♥';
+        break;
+      case "anchor":
+        id = 'ssAnchorButton';
+        buttonText = '⚓';
+        break;
+      case "wheel":
+        id = "ssSettingsWheel";
+        buttonText = '☼';
+        break;
+      case "exit":
+        id = "ssExitButton";
+        buttonText = 'X';
+        break;
     }
-    styleExitButton(exitButtonDiv);
-    exitButtonDiv.onmouseover = function() {
-      exitButtonDiv.style.cursor = 'pointer';
+    if (document.getElementById(id) !== null){
+      document.getElementById(id).parentElement.removeChild(document.getElementById(id));
     }
+    let button = document.createElement('div');
+    button.id = id;
+    button.innerText = buttonText;
+    let stylebutton = (content) => {
+      let style = content.style;
+      if (xPos !== null && yPos !== null) {
+        style.position = 'absolute';
+        if (xPos >= 0) {
+          style.left = `${xPos}px`;
+        }
+        if (xPos < 0) {
+          xPos = xPos*-1;
+          style.right = `${xPos}px`;
+        }
+        if (yPos >= 0) {
+          style.top = `${yPos}px`;
+        }
+        if (yPos < 0) {
+          yPos = yPos * -1;
+          style.bottom = `${yPos}px`;
+        }
+      }
+      if (content.id === "ssUpVoteButton" || content.id === "ssDownVoteButton" || content.id === "ssSaveButton" ) {
+        switch (content.id) {
+          case "ssUpVoteButton":
+            if (this.mainLink.data.likes === true) {
+              content.style.color = '#FF8b60';
+            }
+            break;
+          case "ssDownVoteButton":
+            if (this.mainLink.data.likes === false) {
+              content.style.color = '#9494FF';
+            }
+            break;
+          case "ssSaveButton":
+            if (this.mainLink.data.saved === true) {
+              content.style.color = '#FF63AC';
+            }
+            break;
+          default:
+            style.color = '#eee';
+            break;
+        }
+      }
+      style.fontSize = '15pt';
+      style.border = '1px solid rgba(240,240,240,0.25)';
+      style.padding = '3px';
+      style.paddingTop = '0';
+      style.margin = '2px 3px';
+      style.display = 'flex';
+      style.justifyContent = 'center';
+      style.alignItems = 'center';
+      style.borderRadius = '15px';
+      style.height = '20px';
+      style.width = '20px';
+      style.zIndex = '255';
+    }
+    stylebutton(button);
+    let addListeners = (content) => {
+      content.onmouseover = () => {
+          content.style.cursor = 'pointer';
+          content.style.background = 'rgba(240,240,240,0.1)';
+      }
+      content.onmouseout = () => {
+          content.style.background = 'rgba(240,240,240,0)';
+      }
+    }
+    addListeners(button);
+    parent.appendChild(button);
+  }
 
-    return slideBG.appendChild(exitButtonDiv);
+  createOptionFlex(xPos=null,yPos=null,fHeight='auto',fWidth='auto',parent) {
+    let id = 'ssOptionFlex';
+    if (document.getElementById(id) !== null){
+      document.getElementById(id).parentElement.removeChild(document.getElementById(id));
+    }
+    let optionFlex = document.createElement('div');
+    optionFlex.id = id;
+    let styleFlex = (content) => {
+      let style = content.style;
+      if (xPos !== null && yPos !== null) {
+        style.position = 'absolute';
+        style.left = `${xPos}px`;
+        style.top = `${yPos}px`;
+      }
+      style.display = 'flex';
+      style.justifyContent = 'space-evenly';
+      style.alignContent = 'center';
+      style.alignItems = 'center';
+      style.height = `${fHeight}`;
+      style.width = `${fWidth}`;
+    }
+    styleFlex(optionFlex);
+    this.createButtonByType(null,null,'wheel',optionFlex);
+    // this.createButtonByType(null,null,'anchor',optionFlex);
+    this.createButtonByType(null,null,'up',optionFlex);
+    this.createButtonByType(null,null,'down',optionFlex);
+    this.createButtonByType(null,null,'save',optionFlex);
+    parent.appendChild(optionFlex);
   }
 
   createContentContainer() {
@@ -1282,7 +1583,6 @@ class SlideShowUI {
     if (!document.querySelector('#slideShowBG')) {
       this.hideAllBodyNodes();
       this.createBackground();
-      this.createExitButton();
     }
     if (!document.querySelector('#linkMainDiv')) {
       this.createContentContainer();
@@ -1292,7 +1592,8 @@ class SlideShowUI {
     this.createHead(this.links, this.counter); 
     this.createContent(this.mainLink);
     this.createFooter(this.links, this.counter);
-    new SlideShowSettings(this.dsURL).createWheel(0, 0, document.querySelector('#slideShowBG'));
+    this.createOptionFlex(0,0,'auto','auto',document.querySelector('#slideShowBG'));
+    this.createButtonByType(-1,0,'exit',document.querySelector('#slideShowBG'));
   }
 
   generateLoadNotice(parent) {
@@ -1348,53 +1649,6 @@ class SlideShowSettings {
       this.domain = this.dsURL.urlDomain;
       this.path = this.dsURL.urlPath;
       this.url = `${this.protocol}${this.domain}/${this.path}`;
-  }
-
-  createWheel(xPos,yPos,container) {
-      if (document.getElementById('settingsWheel')) {
-        let oldWheel = document.getElementById('settingsWheel');
-        oldWheel.parentElement.removeChild(oldWheel);
-      }
-      let wheel = document.createElement('div');
-      wheel.id = 'settingsWheel';
-      wheel.innerText = '⚙';
-      const styleSettingsWheel = (content) => {
-          let wheel = content;
-          wheel.style.fontSize = '15pt';
-          wheel.style.color = '#eee';
-          wheel.style.border = '1px solid rgba(0,0,0,0.25)';
-          wheel.style.padding = '3px';
-          wheel.style.paddingTop = '0';
-          wheel.style.margin = '0';
-          wheel.style.display = 'flex';
-          wheel.style.justifyContent = 'center';
-          wheel.style.alignItems = 'center';
-          wheel.style.borderRadius = '15px';
-          wheel.style.height = '20px';
-          wheel.style.width = '20px';
-          wheel.style.position = 'absolute';
-          wheel.style.left = `${xPos}px`;
-          wheel.style.top = `${yPos}px`;
-          return wheel;
-      }
-      styleSettingsWheel(wheel);
-  
-      let addListeners = (content) => {
-          content.onmouseover = () => {
-              content.style.cursor = 'pointer';
-              content.style.background = 'rgba(240,240,240,0.1)';
-          }
-          content.onmouseout = () => {
-              content.style.background = 'rgba(240,240,240,0)';
-          }
-  
-          content.onclick = () => {
-              return this.createSettingsPanel();
-          }
-  
-      }
-      addListeners(wheel);
-      container.appendChild(wheel);
   }
   
   createSettingsPanel() {

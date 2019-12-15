@@ -5,17 +5,20 @@
 Script to browse your current Reddit session as a slideshow. Minimal UI, use arrow keys or mouse to navigate. 
 
 ### Overview & Features
-Sliddit fundamentally changes the browsing experience for Reddit.com to a one-link per page semi-full-screen card-like version. Navigation can be easily accomplished with the arrow keys or the mouse.
+Sliddit fundamentally changes the browsing experience for Reddit.com to a one-link per page semi-full-screen card-like version. Navigation can be easily accomplished with the arrow keys or the mouse. Easily filter out the results by content type by clicking the wheel in the top left. Navigate with the keyboard or mouse. 
 
-#### Interactivity
+#### Interactivity:
+###### Keyboard Shortcuts:
 * Right Arrow (Click or Button Press) - Next Page
 * Left Arrow (Click or Button Press) - Previous Page
+* Up Arrow (Click or Button Press) - Like Post
+* Down Arrow (Click or Button Press) - Dislike Post
 * Escape (Button Press) or X (Click) - Exit Sliddit
-* Posted By (click) - Opens /u/[Posted By]
-* Comments (click) - Opens Comments
+* Posted By (click) - Opens /u/[Posted By] in Sliddit
+* Comments (click) - Opens Comments in Reddit
 * Domain (Click) - Opens link URL
 * Content (Click) - Opens link URL
-* Subreddit (Click) - Opens SubReddit
+* Subreddit (Click) - Opens SubReddit in Sliddit
 
 Operated by pulling a library of links from the Reddit JSON API from the current user's client, then generating a card per link based while tracking the current position. 
 
